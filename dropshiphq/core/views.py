@@ -16,6 +16,9 @@ import requests
 from django.conf import settings
 from django.contrib import messages
 import logging
+from django.views.decorators.csrf import csrf_exempt
+from django.forms.models import model_to_dict
+
 
 logger = logging.getLogger(__name__)
 
@@ -111,15 +114,19 @@ def edit_order(request, order_id):
             form.save()
             messages.success(request, 'Order updated successfully.')
             return redirect('dashboard')
+        else:
+            # If the form is invalid, return the errors as JSON
+            return JsonResponse({'status': 'error', 'errors': form.errors}, status=400)
     else:
-        form = OrderForm(instance=order, user=request.user)
-    return render(request, 'core/edit_order.html', {'form': form, 'order': order})
+        # For GET requests, return the order data as JSON
+        return JsonResponse(model_to_dict(order))
 
 @login_required
+@csrf_exempt
 @require_POST
 def delete_order(request, order_id):
     try:
-        order = Order.objects.get(id=order_id)
+        order = Order.objects.get(id=order_id, user=request.user)
         order.delete()
         return JsonResponse({'status': 'success', 'message': 'Order deleted successfully'})
     except Order.DoesNotExist:

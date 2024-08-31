@@ -109,7 +109,7 @@
                         <td>${{ order.commission|floatformat:2 }}</td>
                         <td>${{ order.total_profit|floatformat:2 }}</td>
                         <td>
-                            <button class="btn btn-sm btn-primary edit-order" data-order-id="{{ order.id }}">Edit</button>
+                            <button class="btn btn-sm btn-primary edit_order" data-order-id="{{ order.id }}">Edit</button>
                             <button class="btn btn-sm btn-danger delete-order" data-toggle="modal" data-target="#deleteConfirmationModal" data-order-id="{{ order.id }}">Delete</button>
                         </td>
                     </tr>
@@ -179,6 +179,7 @@
 {% endblock %}
 
 {% block extra_js %}
+{{ block.super }}
 <script>
 let orderIdToDelete = null;
 
@@ -202,6 +203,7 @@ function deleteOrder(orderId) {
             'X-CSRFToken': getCookie('csrftoken'),
             'Content-Type': 'application/json',
         },
+        credentials: 'same-origin'  // Add this line
     })
     .then(response => {
         console.log(`Delete response status: ${response.status}`);
@@ -250,5 +252,51 @@ function resetForm() {
     console.log('Resetting form');
     document.getElementById('orderForm').reset();
 }
+
+// Edit order functionality
+$('.edit_order').on('click', function(e) {
+    e.preventDefault();  // Prevent any default action
+    var orderId = $(this).data('order-id');
+    $.get(`/edit_order/${orderId}/`, function(data) {
+        // Populate the form with the order data
+        $('#orderForm').attr('action', `/edit_order/${orderId}/`);
+        for (var key in data) {
+            $(`#id_${key}`).val(data[key]);
+        }
+        $('#order_id').val(orderId);
+        
+        // Change the submit button text
+        $('button[type="submit"]').text('Update Order');
+        
+        // Scroll to the form
+        $('html, body').animate({
+            scrollTop: $("#orderForm").offset().top
+        }, 500);
+    });
+});
+
+// Handle form submission
+$('#orderForm').on('submit', function(e) {
+    e.preventDefault();
+    var form = $(this);
+    var url = form.attr('action');
+    
+    $.ajax({
+        type: "POST",
+        url: url,
+        data: form.serialize(),
+        success: function(data) {
+            // Redirect to dashboard on success
+            window.location.href = "{% url 'dashboard' %}";
+        },
+        error: function(xhr, status, error) {
+            // Handle errors
+            var errors = xhr.responseJSON.errors;
+            // Display errors to the user (you might want to improve this part)
+            alert("Error updating order: " + JSON.stringify(errors));
+        }
+    });
+});
+
 </script>
 {% endblock %}

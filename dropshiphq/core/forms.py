@@ -1,5 +1,4 @@
 from django import forms
-from django.core.exceptions import ValidationError
 from .models import Order, APICredentials
 
 class OrderForm(forms.ModelForm):
@@ -20,11 +19,7 @@ class OrderForm(forms.ModelForm):
         for field in optional_fields:
             self.fields[field].required = False
 
-    def clean_order_number(self):
-        order_number = self.cleaned_data.get('order_number')
-        if Order.objects.filter(user=self.user, order_number=order_number).exists():
-            raise ValidationError("An order with this order number already exists.")
-        return order_number
+    # Remove the clean_order_number method entirely
 
 class APICredentialsForm(forms.ModelForm):
     class Meta:
