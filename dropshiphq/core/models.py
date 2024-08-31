@@ -34,3 +34,11 @@ class Order(models.Model):
     @classmethod
     def order_number_exists(cls, user, order_number):
         return cls.objects.filter(user=user, order_number=order_number).exists()
+
+class APICredentials(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    bfmr_api_key = models.CharField(max_length=255, blank=True)
+    bfmr_api_secret = models.CharField(max_length=255, blank=True)
+
+    def __str__(self):
+        return f"{self.user.username}'s API Credentials"

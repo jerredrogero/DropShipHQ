@@ -1,0 +1,19 @@
+{% extends 'core/base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1>Settings</h1>
+    <form method="post">
+        {% csrf_token %}
+        <div class="mb-3">
+            <label for="{{ form.bfmr_api_key.id_for_label }}" class="form-label">BFMR API Key</label>
+            {{ form.bfmr_api_key }}
+        </div>
+        <div class="mb-3">
+            <label for="{{ form.bfmr_api_secret.id_for_label }}" class="form-label">BFMR API Secret</label>
+            {{ form.bfmr_api_secret }}
+        </div>
+        <button type="submit" class="btn btn-primary">Save Changes</button>
+    </form>
+</div>
+{% endblock %}

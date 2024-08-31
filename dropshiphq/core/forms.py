@@ -1,5 +1,6 @@
 from django import forms
-from .models import Order
+from django.core.exceptions import ValidationError
+from .models import Order, APICredentials
 
 class OrderForm(forms.ModelForm):
     class Meta:
@@ -21,6 +22,15 @@ class OrderForm(forms.ModelForm):
 
     def clean_order_number(self):
         order_number = self.cleaned_data.get('order_number')
-        if self.user and Order.order_number_exists(self.user, order_number):
-            raise forms.ValidationError("An order with this order number already exists for your account.")
+        if Order.objects.filter(user=self.user, order_number=order_number).exists():
+            raise ValidationError("An order with this order number already exists.")
         return order_number
+
+class APICredentialsForm(forms.ModelForm):
+    class Meta:
+        model = APICredentials
+        fields = ['bfmr_api_key', 'bfmr_api_secret']
+        widgets = {
+            'bfmr_api_key': forms.PasswordInput(render_value=True),
+            'bfmr_api_secret': forms.PasswordInput(render_value=True),
+        }
