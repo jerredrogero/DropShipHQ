@@ -17,9 +17,6 @@ class Order(models.Model):
     reimbursed = models.DecimalField(max_digits=10, decimal_places=2)
     cash_back = models.DecimalField(max_digits=5, decimal_places=2, default=0, help_text="Cash back percentage")
 
-    class Meta:
-        unique_together = ['user', 'order_number']
-
     def __str__(self):
         return f"{self.user.username} - {self.order_number}"
 

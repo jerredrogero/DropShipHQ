@@ -19,8 +19,6 @@ class OrderForm(forms.ModelForm):
         for field in optional_fields:
             self.fields[field].required = False
 
-    # Remove the clean_order_number method entirely
-
 class APICredentialsForm(forms.ModelForm):
     class Meta:
         model = APICredentials

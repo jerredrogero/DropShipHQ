@@ -30,19 +30,19 @@
             <div class="row">
                 <div class="col-md-3">
                     <h5>Total Cost</h5>
-                    <p>${{ summary.total_cost|floatformat:2 }}</p>
+                    <p>${{ summary.total_cost|default:"0.00"|floatformat:2 }}</p>
                 </div>
                 <div class="col-md-3">
                     <h5>Total Reimbursed</h5>
-                    <p>${{ summary.total_reimbursed|floatformat:2 }}</p>
+                    <p>${{ summary.total_reimbursed|default:"0.00"|floatformat:2 }}</p>
                 </div>
                 <div class="col-md-3">
                     <h5>Total Profit</h5>
-                    <p>${{ summary.total_profit|floatformat:2 }}</p>
+                    <p>${{ summary.total_profit|default:"0.00"|floatformat:2 }}</p>
                 </div>
                 <div class="col-md-3">
                     <h5>Avg. Profit per Order</h5>
-                    <p>${{ summary.avg_profit_per_order|floatformat:2 }}</p>
+                    <p>${{ summary.avg_profit_per_order|default:"0.00"|floatformat:2 }}</p>
                 </div>
             </div>
         </div>
@@ -120,7 +120,7 @@
                 {% endfor %}
                 <tr class="table-info">
                     <td colspan="12"><strong>Total Profit (All Orders)</strong></td>
-                    <td><strong>${{ summary.total_profit|floatformat:2 }}</strong></td>
+                    <td><strong>${{ summary.total_profit|default:"0.00"|floatformat:2 }}</strong></td>
                     <td></td>
                 </tr>
             </tbody>

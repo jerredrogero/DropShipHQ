@@ -33,76 +33,42 @@ def dashboard(request):
             order = form.save(commit=False)
             order.user = request.user
             order.save()
-            logger.info(f"Order saved successfully: ID {order.id}, Product: {order.product}")
-            messages.success(request, f"Order for '{order.product}' has been added successfully.")
-        else:
-            if 'order_number' in form.errors:
-                messages.error(request, "An order with this order number already exists.")
-            else:
-                messages.error(request, "There was an error with your submission. Please check the form.")
+            messages.success(request, 'Order created successfully.')
+            return redirect('dashboard')
     else:
         form = OrderForm(user=request.user)
 
-    # Get date range from request
-    start_date = request.GET.get('start_date')
-    end_date = request.GET.get('end_date')
+    orders = Order.objects.filter(user=request.user).order_by('-date')
 
-    # Set default date range if not provided (e.g., last 30 days)
-    if not start_date or not end_date:
-        end_date = timezone.now().date()
-        start_date = end_date - timedelta(days=30)
-    else:
-        start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
-        end_date = datetime.strptime(end_date, '%Y-%m-%d').date()
-
-    # Include orders up to the end of the end_date
-    end_date = end_date + timedelta(days=1)
-
-    # Fetch all orders for the current user within the date range
-    all_orders = Order.objects.filter(
-        user=request.user,
-        date__range=[start_date, end_date]
-    ).order_by('-date')
-
-    # Pagination for all orders
-    paginator = Paginator(all_orders, 10)  # Show 10 orders per page
-    page = request.GET.get('page')
-    try:
-        orders = paginator.page(page)
-    except PageNotAnInteger:
-        orders = paginator.page(1)
-    except EmptyPage:
-        orders = paginator.page(paginator.num_pages)
-
-    # Calculate summary data
-    summary = all_orders.aggregate(
+    # Calculate summary statistics
+    summary = orders.aggregate(
         total_cost=Sum('cost'),
         total_reimbursed=Sum('reimbursed'),
-        total_profit=Sum(
-            ExpressionWrapper(
-                F('reimbursed') - F('cost') + (F('cost') * F('cash_back') / 100),
-                output_field=DecimalField(max_digits=10, decimal_places=2)
-            )
-        ),
-        avg_profit_per_order=Avg(
-            ExpressionWrapper(
-                F('reimbursed') - F('cost') + (F('cost') * F('cash_back') / 100),
-                output_field=DecimalField(max_digits=10, decimal_places=2)
-            )
-        )
+        total_cash_back=Sum(ExpressionWrapper(
+            F('cost') * F('cash_back') / 100,
+            output_field=DecimalField(max_digits=10, decimal_places=2)
+        )),
+        order_count=Count('id')
     )
 
-    # Add this before rendering the template
-    logger.info(f"Total orders for user {request.user.username}: {Order.objects.filter(user=request.user).count()}")
+    # Calculate total profit
+    summary['total_profit'] = (
+        (summary['total_reimbursed'] or 0) +
+        (summary['total_cash_back'] or 0) -
+        (summary['total_cost'] or 0)
+    )
+
+    # Calculate average profit per order
+    if summary['order_count'] > 0:
+        summary['avg_profit_per_order'] = summary['total_profit'] / summary['order_count']
+    else:
+        summary['avg_profit_per_order'] = 0
 
     context = {
-        'form': OrderForm(user=request.user),
+        'form': form,
         'orders': orders,
         'summary': summary,
-        'start_date': start_date,
-        'end_date': end_date,
     }
-
     return render(request, 'core/dashboard.html', context)
 
 @login_required
