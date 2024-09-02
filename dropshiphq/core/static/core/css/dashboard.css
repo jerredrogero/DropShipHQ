@@ -3,9 +3,20 @@
     transition: all 0.3s ease;
 }
 
+/* General card hover effect (for summary cards) */
 .card:hover {
     transform: translateY(-5px);
     box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+/* Remove hover effect specifically for Add New Order card */
+.card.add-new-order {
+    transition: none;
+}
+
+.card.add-new-order:hover {
+    transform: none;
+    box-shadow: none;
 }
 
 /* Media queries for responsive design */
@@ -42,6 +53,16 @@
     .btn {
         min-height: 44px;
     }
+}
+
+/* Add New Order specific styles */
+.card.add-new-order {
+    transition: none; /* Remove any transition effects */
+}
+
+.card.add-new-order:hover {
+    transform: none; /* Ensure no transform on hover */
+    box-shadow: none; /* Ensure no shadow change on hover */
 }
 
 /* Add New Order form styles */
