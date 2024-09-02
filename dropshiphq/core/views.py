@@ -18,7 +18,8 @@ from django.contrib import messages
 import logging
 from django.views.decorators.csrf import csrf_exempt
 from django.forms.models import model_to_dict
-
+from django.utils.dateparse import parse_date
+import calendar
 
 logger = logging.getLogger(__name__)
 
@@ -27,18 +28,44 @@ def home(request):
 
 @login_required
 def dashboard(request):
-    if request.method == 'POST':
-        form = OrderForm(request.POST, user=request.user)
-        if form.is_valid():
-            order = form.save(commit=False)
-            order.user = request.user
-            order.save()
-            messages.success(request, 'Order created successfully.')
-            return redirect('dashboard')
-    else:
-        form = OrderForm(user=request.user)
+    # Check if the remove filter button was clicked
+    if 'remove_filter' in request.GET:
+        return redirect('dashboard')
 
-    orders = Order.objects.filter(user=request.user).order_by('-date')
+    # Get the current date
+    today = timezone.now().date()
+
+    # Calculate the first and last day of the current month
+    first_day_of_month = today.replace(day=1)
+    last_day_of_month = today.replace(day=calendar.monthrange(today.year, today.month)[1])
+
+    # Get the date range from the request
+    start_date = request.GET.get('start_date')
+    end_date = request.GET.get('end_date')
+
+    # If no dates are provided, use the current month
+    if not start_date:
+        start_date = first_day_of_month
+    else:
+        start_date = parse_date(start_date) or first_day_of_month
+
+    if not end_date:
+        end_date = last_day_of_month
+    else:
+        end_date = parse_date(end_date) or last_day_of_month
+
+    # Ensure end_date is not before start_date
+    if end_date < start_date:
+        end_date = start_date
+
+    # Check if a custom date range is being used
+    is_filtered = start_date != first_day_of_month or end_date != last_day_of_month
+
+    # Filter orders based on the date range
+    orders = Order.objects.filter(
+        user=request.user,
+        date__range=[start_date, end_date]
+    ).order_by('-date')
 
     # Calculate summary statistics
     summary = orders.aggregate(
@@ -64,10 +91,24 @@ def dashboard(request):
     else:
         summary['avg_profit_per_order'] = 0
 
+    if request.method == 'POST':
+        form = OrderForm(request.POST, user=request.user)
+        if form.is_valid():
+            order = form.save(commit=False)
+            order.user = request.user
+            order.save()
+            messages.success(request, 'Order created successfully.')
+            return redirect('dashboard')
+    else:
+        form = OrderForm(user=request.user)
+
     context = {
         'form': form,
         'orders': orders,
         'summary': summary,
+        'start_date': start_date,
+        'end_date': end_date,
+        'is_filtered': is_filtered,
     }
     return render(request, 'core/dashboard.html', context)
 

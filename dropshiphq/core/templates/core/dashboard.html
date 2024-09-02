@@ -7,24 +7,29 @@
     <!-- Date Range Form -->
     <form method="get" class="mb-4">
         <div class="row">
-            <div class="col-md-4">
+            <div class="col-md-3">
                 <label for="start_date">Start Date:</label>
                 <input type="date" id="start_date" name="start_date" value="{{ start_date|date:'Y-m-d' }}" class="form-control">
             </div>
-            <div class="col-md-4">
+            <div class="col-md-3">
                 <label for="end_date">End Date:</label>
                 <input type="date" id="end_date" name="end_date" value="{{ end_date|date:'Y-m-d' }}" class="form-control">
             </div>
-            <div class="col-md-4 d-flex align-items-end">
+            <div class="col-md-3 d-flex align-items-end">
                 <button type="submit" class="btn btn-primary">Apply Filter</button>
             </div>
+            {% if is_filtered %}
+            <div class="col-md-3 d-flex align-items-end">
+                <a href="{% url 'dashboard' %}?remove_filter=1" class="btn btn-secondary">Remove Filter</a>
+            </div>
+            {% endif %}
         </div>
     </form>
 
     <!-- Summary Section -->
     <div class="card mb-4">
         <div class="card-header">
-            <h2 class="mb-0">Summary ({{ start_date|date:"M d, Y" }} - {{ end_date|date:"M d, Y" }})</h2>
+            <h2 class="mb-0">Summary {% if is_filtered %}(Filtered: {{ start_date|date:"M d, Y" }} - {{ end_date|date:"M d, Y" }}){% endif %}</h2>
         </div>
         <div class="card-body">
             <div class="row">
