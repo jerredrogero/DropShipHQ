@@ -1,280 +1,269 @@
 {% extends 'core/base.html' %}
+{% load static %}
+{% load form_tags %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'core/css/dashboard.css' %}">
+{% endblock %}
 
 {% block content %}
-<div class="container mt-4">
-    <h1>Welcome, {{ user.username }}!</h1>
+<div class="container-fluid mt-3">
+    <h2 class="mb-4">Dashboard</h2>
 
     <!-- Date Range Form -->
     <form method="get" class="mb-4">
-        <div class="row">
-            <div class="col-md-3">
-                <label for="start_date">Start Date:</label>
+        <div class="row g-3">
+            <div class="col-md-4 col-sm-6">
+                <label for="start_date" class="form-label">Start Date:</label>
                 <input type="date" id="start_date" name="start_date" value="{{ start_date|date:'Y-m-d' }}" class="form-control">
             </div>
-            <div class="col-md-3">
-                <label for="end_date">End Date:</label>
+            <div class="col-md-4 col-sm-6">
+                <label for="end_date" class="form-label">End Date:</label>
                 <input type="date" id="end_date" name="end_date" value="{{ end_date|date:'Y-m-d' }}" class="form-control">
             </div>
-            <div class="col-md-3 d-flex align-items-end">
-                <button type="submit" class="btn btn-primary">Apply Filter</button>
-            </div>
-            {% if is_filtered %}
-            <div class="col-md-3 d-flex align-items-end">
+            <div class="col-md-4 col-sm-12 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary me-2">Apply Filter</button>
+                {% if is_filtered %}
                 <a href="{% url 'dashboard' %}?remove_filter=1" class="btn btn-secondary">Remove Filter</a>
+                {% endif %}
             </div>
-            {% endif %}
         </div>
     </form>
 
-    <!-- Summary Section -->
-    <div class="card mb-4">
-        <div class="card-header">
-            <h2 class="mb-0">Summary {% if is_filtered %}(Filtered: {{ start_date|date:"M d, Y" }} - {{ end_date|date:"M d, Y" }}){% endif %}</h2>
+    <!-- Summary section -->
+    <h3 class="mb-3">Summary {% if is_filtered %}(Filtered: {{ start_date|date:"M d, Y" }} - {{ end_date|date:"M d, Y" }}){% endif %}</h3>
+    <div class="row row-cols-1 row-cols-sm-2 row-cols-md-4 g-4 mb-4">
+        <div class="col">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="card-title">Total Cost</h5>
+                    <p class="card-text">${{ summary.total_cost|default:"0.00"|floatformat:2 }}</p>
+                </div>
+            </div>
         </div>
-        <div class="card-body">
-            <div class="row">
-                <div class="col-md-3">
-                    <h5>Total Cost</h5>
-                    <p>${{ summary.total_cost|default:"0.00"|floatformat:2 }}</p>
+        <div class="col">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="card-title">Total Reimbursed</h5>
+                    <p class="card-text">${{ summary.total_reimbursed|default:"0.00"|floatformat:2 }}</p>
                 </div>
-                <div class="col-md-3">
-                    <h5>Total Reimbursed</h5>
-                    <p>${{ summary.total_reimbursed|default:"0.00"|floatformat:2 }}</p>
+            </div>
+        </div>
+        <div class="col">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="card-title">Total Cash Back</h5>
+                    <p class="card-text">${{ summary.total_cash_back|default:"0.00"|floatformat:2 }}</p>
                 </div>
-                <div class="col-md-3">
-                    <h5>Total Profit</h5>
-                    <p>${{ summary.total_profit|default:"0.00"|floatformat:2 }}</p>
-                </div>
-                <div class="col-md-3">
-                    <h5>Avg. Profit per Order</h5>
-                    <p>${{ summary.avg_profit_per_order|default:"0.00"|floatformat:2 }}</p>
+            </div>
+        </div>
+        <div class="col">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="card-title">Total Profit</h5>
+                    <p class="card-text">${{ summary.total_profit|default:"0.00"|floatformat:2 }}</p>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Existing Order Form -->
-    <h2>Add/Edit Order</h2>
-    <form method="post" class="dashboard-form" id="orderForm">
-        {% csrf_token %}
-        <input type="hidden" name="order_id" id="order_id">
-        <div class="row">
-            {% for field in form %}
-                <div class="col-md-2 mb-3">
-                    {{ field.label_tag }}{% if field.field.required %} *{% endif %}
-                    {{ field }}
-                    {% if field.errors %}
-                        <div class="text-danger">
-                            {{ field.errors }}
-                        </div>
-                    {% endif %}
-                </div>
-            {% endfor %}
+    <!-- Order creation form -->
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white">
+            <h3 class="mb-0 fs-5">Add New Order</h3>
         </div>
-        <button type="submit" class="btn btn-primary">Save Order</button>
-        <button type="button" class="btn btn-secondary" onclick="resetForm()">Reset Form</button>
-    </form>
+        <div class="card-body">
+            <form method="post" class="row g-2">
+                {% csrf_token %}
+                {% for field in form %}
+                <div class="col-md-4 col-lg-3">
+                    <div class="form-group">
+                        <label for="{{ field.id_for_label }}" class="form-label small">{{ field.label }}</label>
+                        {% if field.field.widget.input_type == 'checkbox' %}
+                            <div class="form-check">
+                                {{ field }}
+                                <label class="form-check-label small" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                            </div>
+                        {% else %}
+                            {{ field|add_class:"form-control form-control-sm" }}
+                        {% endif %}
+                        {% if field.errors %}
+                        <div class="invalid-feedback d-block small">
+                            {{ field.errors|join:", " }}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+                <div class="col-12 mt-3">
+                    <button type="submit" class="btn btn-success">Create Order</button>
+                </div>
+            </form>
+        </div>
+    </div>
 
-    <!-- Existing Orders Table -->
-    <h2 class="mt-4">Your Orders</h2>
+    <!-- Orders table -->
+    <h3 class="mb-3">Your Orders</h3>
     <div class="table-responsive">
-        <table class="table table-striped">
+        <table class="table table-striped table-hover">
             <thead>
                 <tr>
                     <th>Date</th>
-                    <th>Buying Groups</th>
-                    <th>Account</th>
                     <th>Order Number</th>
-                    <th>Tracking Number</th>
                     <th>Product</th>
-                    <th>Merchant</th>
-                    <th>Card</th>
                     <th>Cost</th>
                     <th>Reimbursed</th>
-                    <th>Cash Back (%)</th>
-                    <th>Commission</th>
-                    <th>Total Profit</th>
+                    <th>Cash Back</th>
                     <th>Actions</th>
                 </tr>
             </thead>
             <tbody>
                 {% for order in orders %}
-                    <tr id="order-row-{{ order.id }}">
-                        <td>{{ order.date }}</td>
-                        <td>{{ order.buying_groups }}</td>
-                        <td>{{ order.account }}</td>
-                        <td>{{ order.order_number }}</td>
-                        <td>{{ order.tracking_number }}</td>
-                        <td>{{ order.product }}</td>
-                        <td>{{ order.merchant }}</td>
-                        <td>{{ order.card }}</td>
-                        <td>${{ order.cost|floatformat:2 }}</td>
-                        <td>${{ order.reimbursed|floatformat:2 }}</td>
-                        <td>{{ order.cash_back|floatformat:2 }}%</td>
-                        <td>${{ order.commission|floatformat:2 }}</td>
-                        <td>${{ order.total_profit|floatformat:2 }}</td>
-                        <td>
-                            <button class="btn btn-sm btn-primary edit-order" data-order-id="{{ order.id }}">Edit</button>
-                            <button class="btn btn-sm btn-danger delete-order" data-order-id="{{ order.id }}">Delete</button>
-                        </td>
-                    </tr>
-                {% empty %}
-                    <tr>
-                        <td colspan="14">No orders found.</td>
-                    </tr>
-                {% endfor %}
-                <tr class="table-info">
-                    <td colspan="12"><strong>Total Profit (All Orders)</strong></td>
-                    <td><strong>${{ summary.total_profit|default:"0.00"|floatformat:2 }}</strong></td>
-                    <td></td>
+                <tr data-order-id="{{ order.id }}">
+                    <td><div class="editable" data-field="date">{{ order.date|date:"Y-m-d" }}</div></td>
+                    <td><div class="editable" data-field="order_number">{{ order.order_number }}</div></td>
+                    <td><div class="editable" data-field="product">{{ order.product }}</div></td>
+                    <td>$<div class="editable" data-field="cost">{{ order.cost|floatformat:2 }}</div></td>
+                    <td>$<div class="editable" data-field="reimbursed">{{ order.reimbursed|floatformat:2 }}</div></td>
+                    <td><div class="editable" data-field="cash_back">{{ order.cash_back }}</div>%</td>
+                    <td>
+                        <button class="btn btn-sm btn-primary edit-order" data-order-id="{{ order.id }}">Edit</button>
+                        <button class="btn btn-sm btn-success save-order" data-order-id="{{ order.id }}" style="display:none;">Save</button>
+                        <button class="btn btn-sm btn-secondary cancel-edit" data-order-id="{{ order.id }}" style="display:none;">Cancel</button>
+                        <button class="btn btn-sm btn-danger delete-order" data-order-id="{{ order.id }}">Delete</button>
+                    </td>
                 </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="7" class="text-center">No orders found for the selected date range.</td>
+                </tr>
+                {% endfor %}
             </tbody>
         </table>
     </div>
-
-    <!-- Pagination -->
-    {% if orders.has_other_pages %}
-    <nav aria-label="Page navigation">
-        <ul class="pagination justify-content-center">
-            {% if orders.has_previous %}
-                <li class="page-item"><a class="page-link" href="?page={{ orders.previous_page_number }}&start_date={{ start_date|date:'Y-m-d' }}&end_date={{ end_date|date:'Y-m-d' }}">&laquo;</a></li>
-            {% else %}
-                <li class="page-item disabled"><span class="page-link">&laquo;</span></li>
-            {% endif %}
-
-            {% for i in orders.paginator.page_range %}
-                {% if orders.number == i %}
-                    <li class="page-item active"><span class="page-link">{{ i }} <span class="sr-only">(current)</span></span></li>
-                {% else %}
-                    <li class="page-item"><a class="page-link" href="?page={{ i }}&start_date={{ start_date|date:'Y-m-d' }}&end_date={{ end_date|date:'Y-m-d' }}">{{ i }}</a></li>
-                {% endif %}
-            {% endfor %}
-
-            {% if orders.has_next %}
-                <li class="page-item"><a class="page-link" href="?page={{ orders.next_page_number }}&start_date={{ start_date|date:'Y-m-d' }}&end_date={{ end_date|date:'Y-m-d' }}">&raquo;</a></li>
-            {% else %}
-                <li class="page-item disabled"><span class="page-link">&raquo;</span></li>
-            {% endif %}
-        </ul>
-    </nav>
-    {% endif %}
 </div>
-
-<!-- Delete Confirmation Modal -->
-<div class="modal fade" id="deleteConfirmationModal" tabindex="-1" role="dialog" aria-labelledby="deleteConfirmationModalLabel" aria-hidden="true">
-    <div class="modal-dialog" role="document">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="deleteConfirmationModalLabel">Confirm Delete</h5>
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
-            </div>
-            <div class="modal-body">
-                Are you sure you want to delete this order?
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-danger" id="confirmDeleteButton">Delete</button>
-            </div>
-        </div>
-    </div>
-</div>
-
 {% endblock %}
 
 {% block extra_js %}
-{{ block.super }}
 <script>
-// Ensure jQuery is loaded
-if (typeof jQuery === 'undefined') {
-    document.write('<script src="https://code.jquery.com/jquery-3.6.0.min.js"><\/script>');
-}
+document.addEventListener('DOMContentLoaded', function() {
+    // Edit order
+    document.querySelectorAll('.edit-order').forEach(button => {
+        button.addEventListener('click', function() {
+            const orderId = this.getAttribute('data-order-id');
+            const row = document.querySelector(`tr[data-order-id="${orderId}"]`);
+            
+            if (row) {
+                row.querySelectorAll('.editable').forEach(div => {
+                    const field = div.getAttribute('data-field');
+                    const input = document.createElement('input');
+                    input.type = field === 'date' ? 'date' : 'text';
+                    input.value = div.textContent.trim().replace('$', '').replace('%', '');
+                    input.className = 'form-control form-control-sm';
+                    input.setAttribute('data-field', field);
+                    div.innerHTML = '';
+                    div.appendChild(input);
+                });
 
-let orderIdToDelete = null;
-
-$('.delete-order').on('click', function() {
-    orderIdToDelete = $(this).data('order-id');
-    $('#deleteConfirmationModal').modal('show');
-});
-
-$('#confirmDeleteButton').on('click', function() {
-    if (orderIdToDelete) {
-        deleteOrder(orderIdToDelete);
-    }
-});
-
-function deleteOrder(orderId) {
-    $.ajax({
-        url: `/delete-order/${orderId}/`,
-        type: 'POST',
-        headers: {
-            'X-CSRFToken': getCookie('csrftoken')
-        },
-        success: function(response) {
-            if (response.status === 'success') {
-                $(`#order-row-${orderId}`).remove();
-                $('#deleteConfirmationModal').modal('hide');
-            } else {
-                alert('Error deleting order: ' + response.message);
+                row.querySelector('.edit-order').style.display = 'none';
+                row.querySelector('.delete-order').style.display = 'none';
+                row.querySelector('.save-order').style.display = 'inline-block';
+                row.querySelector('.cancel-edit').style.display = 'inline-block';
             }
-        },
-        error: function(xhr, status, error) {
-            console.error("Error response:", xhr.responseText);
-            alert('An error occurred while deleting the order.');
-        }
+        });
     });
-}
 
-function getCookie(name) {
-    let cookieValue = null;
-    if (document.cookie && document.cookie !== '') {
-        const cookies = document.cookie.split(';');
-        for (let i = 0; i < cookies.length; i++) {
-            const cookie = cookies[i].trim();
-            if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                break;
+    // Save edited order
+    document.querySelectorAll('.save-order').forEach(button => {
+        button.addEventListener('click', function() {
+            const orderId = this.getAttribute('data-order-id');
+            const row = document.querySelector(`tr[data-order-id="${orderId}"]`);
+            
+            if (row) {
+                const formData = new FormData();
+
+                row.querySelectorAll('.editable input').forEach(input => {
+                    const field = input.getAttribute('data-field');
+                    formData.append(field, input.value);
+                    console.log(`Appending ${field}: ${input.value}`);
+                });
+
+                const url = `{% url 'edit_order' 0 %}`.replace('0', orderId);
+                console.log('Sending request to:', url);
+
+                fetch(url, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-CSRFToken': getCookie('csrftoken')
+                    }
+                })
+                .then(response => {
+                    console.log('Response status:', response.status);
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('Response data:', data);
+                    if (data.success) {
+                        location.reload();
+                    } else {
+                        alert('Error updating order. Please check the console for details.');
+                        console.error('Error updating order:', data.errors);
+                    }
+                })
+                .catch(error => {
+                    console.error('Fetch error:', error);
+                    alert('An error occurred while saving the order.');
+                });
+            }
+        });
+    });
+
+    // Cancel edit
+    document.querySelectorAll('.cancel-edit').forEach(button => {
+        button.addEventListener('click', function() {
+            location.reload();
+        });
+    });
+
+    // Delete order
+    document.querySelectorAll('.delete-order').forEach(button => {
+        button.addEventListener('click', function() {
+            const orderId = this.getAttribute('data-order-id');
+            if (confirm('Are you sure you want to delete this order?')) {
+                fetch(`{% url 'delete_order' 0 %}`.replace('0', orderId), {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': getCookie('csrftoken')
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        location.reload();
+                    } else {
+                        alert('Error deleting order');
+                    }
+                });
+            }
+        });
+    });
+
+    // Function to get CSRF token
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
             }
         }
+        return cookieValue;
     }
-    return cookieValue;
-}
-
-function resetForm() {
-    console.log('Resetting form');
-    document.getElementById('orderForm').reset();
-}
-
-// Edit order functionality
-$('.edit-order').on('click', function(e) {
-    e.preventDefault();  // Prevent any default action
-    var orderId = $(this).data('order-id');
-    $.get(`/edit-order/${orderId}/`, function(data) {
-        // Populate the form with the order data
-        $('#orderForm').attr('action', `/edit-order/${orderId}/`);
-        for (var key in data) {
-            $(`#id_${key}`).val(data[key]);
-        }
-        $('#order_id').val(orderId);
-        
-        // Change the submit button text
-        $('button[type="submit"]').text('Update Order');
-        
-        // Scroll to the form
-        $('html, body').animate({
-            scrollTop: $("#orderForm").offset().top
-        }, 500);
-    });
-});
-
-// Reset form after submission
-$('#orderForm').on('submit', function() {
-    setTimeout(function() {
-        $('#orderForm')[0].reset();
-        $('button[type="submit"]').text('Save Order');
-        $('#order_id').val('');
-    }, 100);
 });
 </script>
 {% endblock %}

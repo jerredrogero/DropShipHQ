@@ -5,19 +5,18 @@ class OrderForm(forms.ModelForm):
     class Meta:
         model = Order
         fields = ['date', 'buying_groups', 'account', 'order_number', 'tracking_number', 'product', 'merchant', 'card', 'cost', 'reimbursed', 'cash_back']
-        widgets = {
-            'date': forms.DateInput(attrs={'type': 'date'}),
-            'cash_back': forms.NumberInput(attrs={'step': '0.01', 'min': '0', 'max': '100'}),
-        }
 
     def __init__(self, *args, **kwargs):
         self.user = kwargs.pop('user', None)
-        super(OrderForm, self).__init__(*args, **kwargs)
-        
-        # Make certain fields optional
-        optional_fields = ['buying_groups', 'account', 'tracking_number', 'card']
-        for field in optional_fields:
-            self.fields[field].required = False
+        super().__init__(*args, **kwargs)
+
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        if self.user:
+            instance.user = self.user
+        if commit:
+            instance.save()
+        return instance
 
 class APICredentialsForm(forms.ModelForm):
     class Meta:

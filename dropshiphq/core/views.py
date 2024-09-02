@@ -115,18 +115,25 @@ def dashboard(request):
 @login_required
 def edit_order(request, order_id):
     order = get_object_or_404(Order, id=order_id, user=request.user)
+    
     if request.method == 'POST':
-        form = OrderForm(request.POST, instance=order, user=request.user)
+        data = request.POST.dict()
+        # Convert date string to datetime object
+        if 'date' in data:
+            try:
+                data['date'] = datetime.strptime(data['date'], '%Y-%m-%d').date()
+            except ValueError:
+                return JsonResponse({'success': False, 'errors': {'date': ['Invalid date format']}})
+        
+        form = OrderForm(data, instance=order, user=request.user)
         if form.is_valid():
             form.save()
-            messages.success(request, 'Order updated successfully.')
-            return redirect('dashboard')
+            return JsonResponse({'success': True})
         else:
-            # If the form is invalid, return the errors as JSON
-            return JsonResponse({'status': 'error', 'errors': form.errors}, status=400)
-    else:
-        # For GET requests, return the order data as JSON
-        return JsonResponse(model_to_dict(order))
+            return JsonResponse({'success': False, 'errors': form.errors})
+    
+    # GET request is no longer needed for this approach
+    return JsonResponse({'success': False, 'error': 'Invalid request method'})
 
 @login_required
 @csrf_exempt
@@ -135,9 +142,9 @@ def delete_order(request, order_id):
     try:
         order = Order.objects.get(id=order_id, user=request.user)
         order.delete()
-        return JsonResponse({'status': 'success', 'message': 'Order deleted successfully'})
+        return JsonResponse({'success': True})
     except Order.DoesNotExist:
-        return JsonResponse({'status': 'error', 'message': 'Order not found'}, status=404)
+        return JsonResponse({'success': False, 'error': 'Order not found'}, status=404)
 
 @require_http_methods(["GET", "POST"])
 def logout_view(request):
