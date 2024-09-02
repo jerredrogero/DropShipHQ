@@ -109,8 +109,8 @@
                         <td>${{ order.commission|floatformat:2 }}</td>
                         <td>${{ order.total_profit|floatformat:2 }}</td>
                         <td>
-                            <button class="btn btn-sm btn-primary edit_order" data-order-id="{{ order.id }}">Edit</button>
-                            <button class="btn btn-sm btn-danger delete-order" data-toggle="modal" data-target="#deleteConfirmationModal" data-order-id="{{ order.id }}">Delete</button>
+                            <button class="btn btn-sm btn-primary edit-order" data-order-id="{{ order.id }}">Edit</button>
+                            <button class="btn btn-sm btn-danger delete-order" data-order-id="{{ order.id }}">Delete</button>
                         </td>
                     </tr>
                 {% empty %}
@@ -181,55 +181,43 @@
 {% block extra_js %}
 {{ block.super }}
 <script>
+// Ensure jQuery is loaded
+if (typeof jQuery === 'undefined') {
+    document.write('<script src="https://code.jquery.com/jquery-3.6.0.min.js"><\/script>');
+}
+
 let orderIdToDelete = null;
 
-$('#deleteConfirmationModal').on('show.bs.modal', function (event) {
-    const button = $(event.relatedTarget); // Button that triggered the modal
-    orderIdToDelete = button.data('order-id'); // Extract info from data-* attributes
+$('.delete-order').on('click', function() {
+    orderIdToDelete = $(this).data('order-id');
+    $('#deleteConfirmationModal').modal('show');
 });
 
-document.getElementById('confirmDeleteButton').addEventListener('click', function() {
-    if (orderIdToDelete !== null) {
+$('#confirmDeleteButton').on('click', function() {
+    if (orderIdToDelete) {
         deleteOrder(orderIdToDelete);
-        $('#deleteConfirmationModal').modal('hide');
     }
 });
 
 function deleteOrder(orderId) {
-    console.log(`Attempting to delete order ${orderId}`);
-    fetch(`/delete-order/${orderId}/`, {
-        method: 'POST',
+    $.ajax({
+        url: `/delete-order/${orderId}/`,
+        type: 'POST',
         headers: {
-            'X-CSRFToken': getCookie('csrftoken'),
-            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
         },
-        credentials: 'same-origin'  // Add this line
-    })
-    .then(response => {
-        console.log(`Delete response status: ${response.status}`);
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        return response.json();
-    })
-    .then(data => {
-        console.log('Delete response data:', data);
-        if (data.status === 'success') {
-            const row = document.getElementById(`order-row-${orderId}`);
-            if (row) {
-                row.remove();
-                console.log(`Row for order ${orderId} removed from DOM`);
+        success: function(response) {
+            if (response.status === 'success') {
+                $(`#order-row-${orderId}`).remove();
+                $('#deleteConfirmationModal').modal('hide');
             } else {
-                console.error(`Row for order ${orderId} not found in DOM`);
+                alert('Error deleting order: ' + response.message);
             }
-            alert(data.message);
-        } else {
-            alert('Error deleting order: ' + data.message);
+        },
+        error: function(xhr, status, error) {
+            console.error("Error response:", xhr.responseText);
+            alert('An error occurred while deleting the order.');
         }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        alert('An error occurred while deleting the order: ' + error.message);
     });
 }
 
@@ -254,12 +242,12 @@ function resetForm() {
 }
 
 // Edit order functionality
-$('.edit_order').on('click', function(e) {
+$('.edit-order').on('click', function(e) {
     e.preventDefault();  // Prevent any default action
     var orderId = $(this).data('order-id');
-    $.get(`/edit_order/${orderId}/`, function(data) {
+    $.get(`/edit-order/${orderId}/`, function(data) {
         // Populate the form with the order data
-        $('#orderForm').attr('action', `/edit_order/${orderId}/`);
+        $('#orderForm').attr('action', `/edit-order/${orderId}/`);
         for (var key in data) {
             $(`#id_${key}`).val(data[key]);
         }
@@ -275,28 +263,13 @@ $('.edit_order').on('click', function(e) {
     });
 });
 
-// Handle form submission
-$('#orderForm').on('submit', function(e) {
-    e.preventDefault();
-    var form = $(this);
-    var url = form.attr('action');
-    
-    $.ajax({
-        type: "POST",
-        url: url,
-        data: form.serialize(),
-        success: function(data) {
-            // Redirect to dashboard on success
-            window.location.href = "{% url 'dashboard' %}";
-        },
-        error: function(xhr, status, error) {
-            // Handle errors
-            var errors = xhr.responseJSON.errors;
-            // Display errors to the user (you might want to improve this part)
-            alert("Error updating order: " + JSON.stringify(errors));
-        }
-    });
+// Reset form after submission
+$('#orderForm').on('submit', function() {
+    setTimeout(function() {
+        $('#orderForm')[0].reset();
+        $('button[type="submit"]').text('Save Order');
+        $('#order_id').val('');
+    }, 100);
 });
-
 </script>
 {% endblock %}
