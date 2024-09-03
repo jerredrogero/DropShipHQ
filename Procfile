@@ -1,1 +1,1 @@
-web: gunicorn dropshiphq.wsgi:application
+web: gunicorn dropshiphq.wsgi
