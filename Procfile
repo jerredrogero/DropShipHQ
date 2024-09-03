@@ -1,1 +1,1 @@
-web: gunicorn dropshiphq.wsgi
+web: gunicorn dropshiphq.wsgi:application --log-file -
