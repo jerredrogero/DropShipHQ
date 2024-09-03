@@ -5,21 +5,17 @@ from django.contrib import messages
 from django.http import JsonResponse
 from django.contrib.auth import logout
 from django.contrib.auth.forms import UserCreationForm
-from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
-from django.db.models import Sum, F, ExpressionWrapper, DecimalField, Avg, Count, Value
-from django.db.models.functions import Cast, Coalesce, TruncMonth
-from .models import Order, APICredentials
-from .forms import OrderForm, APICredentialsForm
-from datetime import datetime, timedelta
+from django.db.models import Sum, F, ExpressionWrapper, DecimalField, Count
+from .models import Order, APICredentials, BuyingGroup
+from .forms import OrderForm, APICredentialsForm, DealCalculatorForm, BuyingGroupForm
+from datetime import datetime
 from django.utils import timezone
 import requests
-from django.conf import settings
-from django.contrib import messages
 import logging
 from django.views.decorators.csrf import csrf_exempt
-from django.forms.models import model_to_dict
 from django.utils.dateparse import parse_date
 import calendar
+from decimal import Decimal
 
 logger = logging.getLogger(__name__)
 
@@ -109,30 +105,25 @@ def dashboard(request):
         'start_date': start_date,
         'end_date': end_date,
         'is_filtered': is_filtered,
+        'buying_groups': BuyingGroup.objects.filter(user=request.user),
     }
     return render(request, 'core/dashboard.html', context)
 
 @login_required
 def edit_order(request, order_id):
-    order = get_object_or_404(Order, id=order_id, user=request.user)
+    try:
+        order = Order.objects.get(id=order_id, user=request.user)
+    except Order.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Order not found'}, status=404)
     
     if request.method == 'POST':
-        data = request.POST.dict()
-        # Convert date string to datetime object
-        if 'date' in data:
-            try:
-                data['date'] = datetime.strptime(data['date'], '%Y-%m-%d').date()
-            except ValueError:
-                return JsonResponse({'success': False, 'errors': {'date': ['Invalid date format']}})
-        
-        form = OrderForm(data, instance=order, user=request.user)
+        form = OrderForm(request.POST, instance=order, user=request.user)
         if form.is_valid():
             form.save()
             return JsonResponse({'success': True})
         else:
             return JsonResponse({'success': False, 'errors': form.errors})
     
-    # GET request is no longer needed for this approach
     return JsonResponse({'success': False, 'error': 'Invalid request method'})
 
 @login_required
@@ -166,17 +157,41 @@ def signup(request):
 @login_required
 def settings(request):
     api_credentials, created = APICredentials.objects.get_or_create(user=request.user)
+    buying_groups = BuyingGroup.objects.filter(user=request.user)
     
     if request.method == 'POST':
-        form = APICredentialsForm(request.POST, instance=api_credentials)
-        if form.is_valid():
-            form.save()
-            messages.success(request, 'API credentials updated successfully.')
-            return redirect('settings')
+        if 'api_credentials' in request.POST:
+            api_form = APICredentialsForm(request.POST, instance=api_credentials)
+            if api_form.is_valid():
+                api_form.save()
+                messages.success(request, 'API credentials updated successfully.')
+                return redirect('settings')
+        elif 'buying_group' in request.POST:
+            buying_group_form = BuyingGroupForm(request.POST)
+            if buying_group_form.is_valid():
+                buying_group = buying_group_form.save(commit=False)
+                buying_group.user = request.user
+                buying_group.save()
+                messages.success(request, 'Buying group added successfully.')
+                return redirect('settings')
     else:
-        form = APICredentialsForm(instance=api_credentials)
+        api_form = APICredentialsForm(instance=api_credentials)
+        buying_group_form = BuyingGroupForm()
     
-    return render(request, 'core/settings.html', {'form': form})
+    context = {
+        'api_form': api_form,
+        'buying_group_form': buying_group_form,
+        'buying_groups': buying_groups,
+    }
+    return render(request, 'core/settings.html', context)
+
+@login_required
+def delete_buying_group(request, pk):
+    buying_group = get_object_or_404(BuyingGroup, pk=pk, user=request.user)
+    if request.method == 'POST':
+        buying_group.delete()
+        messages.success(request, 'Buying group deleted successfully.')
+    return redirect('settings')
 
 @login_required
 def bfmr_deals(request):
@@ -202,13 +217,70 @@ def bfmr_deals(request):
         response.raise_for_status()
         data = response.json()
         deals = data.get('deals', [])
+        
+        # Process the deals to include price and discount information
+        for deal in deals:
+            deal['price'] = deal.get('price', 'N/A')
+            deal['discount'] = deal.get('discount', 'N/A')
+            if deal['price'] != 'N/A' and deal['discount'] != 'N/A':
+                deal['discounted_price'] = float(deal['price']) - float(deal['discount'])
+            else:
+                deal['discounted_price'] = 'N/A'
+        
     except requests.RequestException as e:
         deals = []
         messages.error(request, "Failed to fetch deals from BFMR. Please check your API credentials.")
         # Log the error
-        print(f"BFMR API request failed: {str(e)}")
+        logger.error(f"BFMR API request failed: {str(e)}")
         if response:
-            print(f"Response status: {response.status_code}")
-            print(f"Response content: {response.text}")
+            logger.error(f"Response status: {response.status_code}")
+            logger.error(f"Response content: {response.text}")
     
     return render(request, 'core/bfmr_deals.html', {'deals': deals})
+
+@require_http_methods(["GET", "POST"])
+def deal_calculator(request):
+    if request.method == 'POST':
+        form = DealCalculatorForm(request.POST)
+        if form.is_valid():
+            purchase_price = form.cleaned_data['purchase_price']
+            reimbursement_price = form.cleaned_data['reimbursement_price']
+            cashback_percentage = form.cleaned_data['cashback_percentage']
+            
+            results = calculate_roc(purchase_price, reimbursement_price, cashback_percentage)
+            
+            return JsonResponse(results)
+        else:
+            return JsonResponse({'error': 'Invalid form data'}, status=400)
+    else:
+        form = DealCalculatorForm()
+    
+    return render(request, 'core/deal_calculator.html', {'form': form})
+
+def calculate_roc(purchase_price, reimbursement_price, cashback_percentage):
+    """Calculates the Return on Cost (ROC) and provides a deal quality assessment."""
+    purchase_price = Decimal(str(purchase_price))
+    reimbursement_price = Decimal(str(reimbursement_price))
+    cashback_percentage = Decimal(str(cashback_percentage))
+
+    cashback = purchase_price * (cashback_percentage / 100)
+    difference = purchase_price - reimbursement_price
+    profit = cashback - difference
+    roc = (profit / purchase_price) * 100
+
+    if roc >= 6:
+        result = "Excellent Deal!"
+    elif roc >= 3.39 and roc < 6:
+        result = "Great Deal!"
+    elif roc >= 1 and roc < 3.39:
+        result = "Okay Deal."
+    elif roc >= 0 and roc < 1:
+        result = "Fair Deal."
+    else:
+        result = "Bad Deal."
+
+    return {
+        "profit": float(profit),
+        "roc": float(roc),
+        "result": result
+    }

@@ -1,0 +1,86 @@
+{% extends 'core/base.html' %}
+{% load widget_tweaks %}
+
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h2 class="mb-0">Deal Calculator</h2>
+                </div>
+                <div class="card-body">
+                    <form id="dealCalculatorForm">
+                        {% csrf_token %}
+                        {% for field in form %}
+                            <div class="mb-3">
+                                <label for="{{ field.id_for_label }}" class="form-label">{{ field.label }}</label>
+                                {{ field|add_class:"form-control" }}
+                            </div>
+                        {% endfor %}
+                        <button type="submit" class="btn btn-primary">Calculate</button>
+                    </form>
+                </div>
+            </div>
+
+            <div id="results" class="card mt-4 shadow" style="display: none;">
+                <div class="card-header bg-success text-white">
+                    <h3 class="mb-0">Results</h3>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <h4>Profit</h4>
+                            <p class="display-4">$<span id="profit"></span></p>
+                        </div>
+                        <div class="col-md-4">
+                            <h4>ROC</h4>
+                            <p class="display-4"><span id="roc"></span>%</p>
+                        </div>
+                        <div class="col-md-4">
+                            <h4>Deal Quality</h4>
+                            <p class="display-4"><span id="result"></span></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.getElementById('dealCalculatorForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    fetch('{% url "deal_calculator" %}', {
+        method: 'POST',
+        body: new FormData(this),
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}'
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+        return response.json();
+    })
+    .then(data => {
+        console.log('Received data:', data);  // Debug log
+        if (typeof data.profit === 'number' && typeof data.roc === 'number') {
+            document.getElementById('profit').textContent = data.profit.toFixed(2);
+            document.getElementById('roc').textContent = data.roc.toFixed(2);
+        } else {
+            document.getElementById('profit').textContent = data.profit;
+            document.getElementById('roc').textContent = data.roc;
+        }
+        document.getElementById('result').textContent = data.result;
+        document.getElementById('results').style.display = 'block';
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('An error occurred while calculating. Please try again.');
+    });
+});
+</script>
+{% endblock %}

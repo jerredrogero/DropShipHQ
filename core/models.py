@@ -3,22 +3,29 @@ from django.contrib.auth.models import User
 
 # Create your models here.
 
+class BuyingGroup(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    name = models.CharField(max_length=100)
+
+    def __str__(self):
+        return self.name
+
 class Order(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     date = models.DateField()
-    buying_groups = models.CharField(max_length=100, blank=True)
-    account = models.CharField(max_length=100, blank=True)
-    order_number = models.CharField(max_length=100, blank=True)
-    tracking_number = models.CharField(max_length=100, blank=True)
-    product = models.CharField(max_length=200)
-    merchant = models.CharField(max_length=100, blank=True)
-    card = models.CharField(max_length=50, blank=True)
+    buying_group = models.ForeignKey(BuyingGroup, on_delete=models.SET_NULL, null=True, blank=True)
+    account = models.CharField(max_length=100)
+    order_number = models.CharField(max_length=100)
+    tracking_number = models.CharField(max_length=100, blank=True, null=True)
+    product = models.CharField(max_length=255)
+    merchant = models.CharField(max_length=100)
+    card = models.CharField(max_length=100)
     cost = models.DecimalField(max_digits=10, decimal_places=2)
     reimbursed = models.DecimalField(max_digits=10, decimal_places=2)
-    cash_back = models.DecimalField(max_digits=5, decimal_places=2, default=0, help_text="Cash back percentage")
+    cash_back = models.DecimalField(max_digits=10, decimal_places=2)
 
     def __str__(self):
-        return f"{self.user.username} - {self.order_number}"
+        return f"{self.date} - {self.product}"
 
     @property
     def commission(self):

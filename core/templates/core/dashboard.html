@@ -4,6 +4,13 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'core/css/dashboard.css' %}">
+<style>
+    .edit-mode .editable {
+        background-color: #fff3cd;
+        padding: 2px;
+        border: 1px solid #ffeeba;
+    }
+</style>
 {% endblock %}
 
 {% block content %}
@@ -103,14 +110,19 @@
     </div>
 
     <!-- Orders table -->
-    <h3 class="mb-3">Your Orders</h3>
+    <h2 class="mt-4">Your Orders</h2>
     <div class="table-responsive">
-        <table class="table table-striped table-hover">
+        <table class="table table-striped">
             <thead>
                 <tr>
                     <th>Date</th>
+                    <th>Buying Group</th>
+                    <th>Account</th>
                     <th>Order Number</th>
+                    <th>Tracking Number</th>
                     <th>Product</th>
+                    <th>Merchant</th>
+                    <th>Card</th>
                     <th>Cost</th>
                     <th>Reimbursed</th>
                     <th>Cash Back</th>
@@ -119,151 +131,174 @@
             </thead>
             <tbody>
                 {% for order in orders %}
-                <tr data-order-id="{{ order.id }}">
-                    <td><div class="editable" data-field="date">{{ order.date|date:"Y-m-d" }}</div></td>
-                    <td><div class="editable" data-field="order_number">{{ order.order_number }}</div></td>
-                    <td><div class="editable" data-field="product">{{ order.product }}</div></td>
-                    <td>$<div class="editable" data-field="cost">{{ order.cost|floatformat:2 }}</div></td>
-                    <td>$<div class="editable" data-field="reimbursed">{{ order.reimbursed|floatformat:2 }}</div></td>
-                    <td><div class="editable" data-field="cash_back">{{ order.cash_back }}</div>%</td>
+                <tr id="order-{{ order.id }}">
+                    <td><span class="editable" data-field="date">{{ order.date|date:"Y-m-d" }}</span></td>
+                    <td>
+                        <select class="editable" data-field="buying_group" disabled>
+                            <option value="">---------</option>
+                            {% for group in buying_groups %}
+                                <option value="{{ group.id }}" {% if order.buying_group_id == group.id %}selected{% endif %}>{{ group.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </td>
+                    <td><span class="editable" data-field="account">{{ order.account }}</span></td>
+                    <td><span class="editable" data-field="order_number">{{ order.order_number }}</span></td>
+                    <td><span class="editable" data-field="tracking_number">{{ order.tracking_number }}</span></td>
+                    <td><span class="editable" data-field="product">{{ order.product }}</span></td>
+                    <td><span class="editable" data-field="merchant">{{ order.merchant }}</span></td>
+                    <td><span class="editable" data-field="card">{{ order.card }}</span></td>
+                    <td><span class="editable" data-field="cost">{{ order.cost }}</span></td>
+                    <td><span class="editable" data-field="reimbursed">{{ order.reimbursed }}</span></td>
+                    <td><span class="editable" data-field="cash_back">{{ order.cash_back }}</span></td>
                     <td>
                         <button class="btn btn-sm btn-primary edit-order" data-order-id="{{ order.id }}">Edit</button>
-                        <button class="btn btn-sm btn-success save-order" data-order-id="{{ order.id }}" style="display:none;">Save</button>
-                        <button class="btn btn-sm btn-secondary cancel-edit" data-order-id="{{ order.id }}" style="display:none;">Cancel</button>
                         <button class="btn btn-sm btn-danger delete-order" data-order-id="{{ order.id }}">Delete</button>
                     </td>
-                </tr>
-                {% empty %}
-                <tr>
-                    <td colspan="7" class="text-center">No orders found for the selected date range.</td>
                 </tr>
                 {% endfor %}
             </tbody>
         </table>
     </div>
 </div>
-{% endblock %}
 
-{% block extra_js %}
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Edit order
-    document.querySelectorAll('.edit-order').forEach(button => {
-        button.addEventListener('click', function() {
-            const orderId = this.getAttribute('data-order-id');
-            const row = document.querySelector(`tr[data-order-id="${orderId}"]`);
-            
-            if (row) {
-                row.querySelectorAll('.editable').forEach(div => {
-                    const field = div.getAttribute('data-field');
-                    const input = document.createElement('input');
-                    input.type = field === 'date' ? 'date' : 'text';
-                    input.value = div.textContent.trim().replace('$', '').replace('%', '');
-                    input.className = 'form-control form-control-sm';
-                    input.setAttribute('data-field', field);
-                    div.innerHTML = '';
-                    div.appendChild(input);
-                });
-
-                row.querySelector('.edit-order').style.display = 'none';
-                row.querySelector('.delete-order').style.display = 'none';
-                row.querySelector('.save-order').style.display = 'inline-block';
-                row.querySelector('.cancel-edit').style.display = 'inline-block';
-            }
-        });
-    });
-
-    // Save edited order
-    document.querySelectorAll('.save-order').forEach(button => {
-        button.addEventListener('click', function() {
-            const orderId = this.getAttribute('data-order-id');
-            const row = document.querySelector(`tr[data-order-id="${orderId}"]`);
-            
-            if (row) {
-                const formData = new FormData();
-
-                row.querySelectorAll('.editable input').forEach(input => {
-                    const field = input.getAttribute('data-field');
-                    formData.append(field, input.value);
-                    console.log(`Appending ${field}: ${input.value}`);
-                });
-
-                const url = `{% url 'edit_order' 0 %}`.replace('0', orderId);
-                console.log('Sending request to:', url);
-
-                fetch(url, {
-                    method: 'POST',
-                    body: formData,
-                    headers: {
-                        'X-CSRFToken': getCookie('csrftoken')
-                    }
-                })
-                .then(response => {
-                    console.log('Response status:', response.status);
-                    return response.json();
-                })
-                .then(data => {
-                    console.log('Response data:', data);
-                    if (data.success) {
-                        location.reload();
-                    } else {
-                        alert('Error updating order. Please check the console for details.');
-                        console.error('Error updating order:', data.errors);
-                    }
-                })
-                .catch(error => {
-                    console.error('Fetch error:', error);
-                    alert('An error occurred while saving the order.');
-                });
-            }
-        });
-    });
-
-    // Cancel edit
-    document.querySelectorAll('.cancel-edit').forEach(button => {
-        button.addEventListener('click', function() {
-            location.reload();
-        });
-    });
-
-    // Delete order
-    document.querySelectorAll('.delete-order').forEach(button => {
-        button.addEventListener('click', function() {
-            const orderId = this.getAttribute('data-order-id');
-            if (confirm('Are you sure you want to delete this order?')) {
-                fetch(`{% url 'delete_order' 0 %}`.replace('0', orderId), {
-                    method: 'POST',
-                    headers: {
-                        'X-CSRFToken': getCookie('csrftoken')
-                    }
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        location.reload();
-                    } else {
-                        alert('Error deleting order');
-                    }
-                });
-            }
-        });
-    });
-
-    // Function to get CSRF token
-    function getCookie(name) {
-        let cookieValue = null;
-        if (document.cookie && document.cookie !== '') {
-            const cookies = document.cookie.split(';');
-            for (let i = 0; i < cookies.length; i++) {
-                const cookie = cookies[i].trim();
-                if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                    break;
-                }
-            }
+$(document).ready(function() {
+    // Function to show toast notification
+    function showToast(message, type = 'success') {
+        // Assuming you have a function to show toasts, replace this with your actual implementation
+        if (typeof showToastNotification === 'function') {
+            showToastNotification(message, type);
+        } else {
+            console.log('Toast notification:', message, type);
         }
-        return cookieValue;
     }
+
+    // Edit button click handler
+    $('.edit-order').click(function(e) {
+        e.preventDefault();
+        var orderId = $(this).data('order-id');
+        var row = $('#order-' + orderId);
+        
+        console.log('Edit button clicked for order:', orderId);
+        
+        // Check if already in edit mode
+        if (row.hasClass('edit-mode')) {
+            console.log('Already in edit mode, saving...');
+            saveOrder(orderId);
+        } else {
+            console.log('Entering edit mode');
+            // Enter edit mode
+            row.addClass('edit-mode');
+            
+            // Make fields editable
+            row.find('.editable').attr('contenteditable', true);
+            row.find('select').prop('disabled', false);
+            
+            // Change button text
+            $(this).text('Save');
+            
+            // Add a cancel button
+            $(this).after('<button class="btn btn-sm btn-secondary cancel-edit ml-2" data-order-id="' + orderId + '">Cancel</button>');
+            
+            showToast('Editing order. Click Save when done.', 'info');
+        }
+    });
+
+    // Cancel button click handler
+    $(document).on('click', '.cancel-edit', function(e) {
+        e.preventDefault();
+        var orderId = $(this).data('order-id');
+        exitEditMode(orderId);
+        showToast('Edit cancelled', 'info');
+    });
+
+    function exitEditMode(orderId) {
+        var row = $('#order-' + orderId);
+        
+        console.log('Exiting edit mode for order:', orderId);
+        
+        // Remove edit mode class
+        row.removeClass('edit-mode');
+        
+        // Revert fields to non-editable
+        row.find('.editable').attr('contenteditable', false);
+        row.find('select').prop('disabled', true);
+        
+        // Change button back to "Edit"
+        row.find('.edit-order').text('Edit');
+        
+        // Remove the cancel button
+        row.find('.cancel-edit').remove();
+    }
+
+    function saveOrder(orderId) {
+        var row = $('#order-' + orderId);
+        
+        console.log('Saving order:', orderId);
+        
+        var data = {};
+        row.find('.editable').each(function() {
+            var field = $(this).data('field');
+            var value = $(this).is('select') ? $(this).val() : $(this).text().trim();
+            data[field] = value;
+        });
+
+        console.log('Data to be sent:', data);
+
+        // Check if required fields are empty
+        var requiredFields = ['date', 'account', 'order_number', 'product', 'merchant', 'card', 'cost', 'reimbursed', 'cash_back'];
+        var emptyFields = requiredFields.filter(field => !data[field]);
+        
+        if (emptyFields.length > 0) {
+            showToast('Please fill in all required fields: ' + emptyFields.join(', '), 'error');
+            return;
+        }
+
+        $.ajax({
+            url: '/edit-order/' + orderId + '/',
+            method: 'POST',
+            data: data,
+            headers: {'X-CSRFToken': '{{ csrf_token }}'},
+            success: function(response) {
+                console.log('Server response:', response);
+                if (response.success) {
+                    exitEditMode(orderId);
+                    showToast('Order updated successfully', 'success');
+                } else {
+                    showToast('Error saving order: ' + JSON.stringify(response.errors), 'error');
+                }
+            },
+            error: function(xhr, status, error) {
+                console.log('AJAX error:', status, error);
+                console.log('Response text:', xhr.responseText);
+                showToast('Error saving order: ' + error, 'error');
+            }
+        });
+    }
+
+    // Delete button click handler
+    $('.delete-order').click(function() {
+        var orderId = $(this).data('order-id');
+        if (confirm('Are you sure you want to delete this order?')) {
+            $.ajax({
+                url: '/delete-order/' + orderId + '/',
+                method: 'POST',
+                headers: {'X-CSRFToken': '{{ csrf_token }}'},
+                success: function(response) {
+                    if (response.success) {
+                        $('#order-' + orderId).remove();
+                        showToast('Order deleted successfully', 'success');
+                    } else {
+                        showToast('Error deleting order', 'error');
+                    }
+                },
+                error: function() {
+                    showToast('Error deleting order', 'error');
+                }
+            });
+        }
+    });
 });
 </script>
 {% endblock %}
