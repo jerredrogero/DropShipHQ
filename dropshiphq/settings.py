@@ -80,8 +80,15 @@ WSGI_APPLICATION = 'dropshiphq.wsgi.application'
 
 if os.environ.get('DATABASE_URL'):  # Use PostgreSQL on Heroku
     DATABASES = {
-        'default': dj_database_url.config(conn_max_age=600, ssl_require=True)
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'd8pgqe5s8c6bqa',
+        'USER': 'u8b24ppppc3ud2',
+        'PASSWORD': 'pce40d58447e68480c964eea11a1dd3c076a77e2b10c82fa3661e7e633c9efbe8',
+        'HOST': 'cb5ajfjosdpmil.cluster-czrs8kj4isg7.us-east-1.rds.amazonaws.com',
+        'PORT': '5432',
     }
+}
 else:  # Use SQLite3 for local development
     DATABASES = {
         'default': {
