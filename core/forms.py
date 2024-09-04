@@ -1,5 +1,9 @@
 from django import forms
 from .models import Order, APICredentials, BuyingGroup
+from django.contrib.auth.forms import UserCreationForm
+from django.utils.translation import gettext_lazy as _
+from django.contrib.auth import get_user_model
+
 
 class OrderForm(forms.ModelForm):
     class Meta:
@@ -35,3 +39,10 @@ class BuyingGroupForm(forms.ModelForm):
     class Meta:
         model = BuyingGroup
         fields = ['name']
+
+class RegisterForm(UserCreationForm):
+    usable_password = None
+
+    class Meta:
+        model = get_user_model()
+        fields = ["username", "password1", "password2"]
