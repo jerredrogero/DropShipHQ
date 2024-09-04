@@ -19,6 +19,7 @@ from decimal import Decimal
 from django.urls import reverse_lazy
 from django.views.generic.edit import FormView
 from .forms import UserCreationForm
+from django.contrib.auth import views as auth_views
 
 logger = logging.getLogger(__name__)
 
@@ -285,3 +286,11 @@ def calculate_roc(purchase_price, reimbursement_price, cashback_percentage):
         "roc": float(roc),
         "result": result
     }
+
+class CustomPasswordResetDoneView(auth_views.PasswordResetDoneView):
+    def get(self, request, *args, **kwargs):
+        messages.success(request, "We've emailed you instructions for setting your password. You should receive them shortly.")
+        return super().get(request, *args, **kwargs)
+
+    def get_success_url(self):
+        return reverse_lazy('home')  # Replace 'home' with your home page URL name
