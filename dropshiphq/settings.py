@@ -10,24 +10,33 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.1/ref/settings/
 """
 
+import os
 from pathlib import Path
+from dotenv import load_dotenv
 import django_heroku
 import dj_database_url
-import os
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+# Load environment variables from .env file
+load_dotenv(BASE_DIR / '.env')
+
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-%=!ym8v_p&rvzwly@j_!55n$7e_nl3(0gs3_%+#7z6_c(mma(u'
+# Use environment variable for SECRET_KEY
+SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY')
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+# Raise an error if SECRET_KEY is not set
+if not SECRET_KEY:
+    raise ValueError("No SECRET_KEY set for Django application")
 
-ALLOWED_HOSTS = ['*']
+# Set DEBUG based on environment
+DEBUG = os.environ.get('DJANGO_DEBUG', '') != 'False'
+
+# Improve ALLOWED_HOSTS configuration
+ALLOWED_HOSTS = os.environ.get('DJANGO_ALLOWED_HOSTS', 'localhost,127.0.0.1', ).split(',')
 
 
 # Application definition
@@ -78,24 +87,13 @@ WSGI_APPLICATION = 'dropshiphq.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
-if os.environ.get('DATABASE_URL'):  # Use PostgreSQL on Heroku
-    DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'd8pgqe5s8c6bqa',
-        'USER': 'u8b24ppppc3ud2',
-        'PASSWORD': 'pce40d58447e68480c964eea11a1dd3c076a77e2b10c82fa3661e7e633c9efbe8',
-        'HOST': 'cb5ajfjosdpmil.cluster-czrs8kj4isg7.us-east-1.rds.amazonaws.com',
-        'PORT': '5432',
-    }
+# Improve database configuration
+DATABASES = {
+    'default': dj_database_url.config(
+        default='sqlite:///' + os.path.join(BASE_DIR, 'db.sqlite3'),
+        conn_max_age=600
+    )
 }
-else:  # Use SQLite3 for local development
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': BASE_DIR / 'db.sqlite3',
-        }
-    }
 
 
 # Password validation
@@ -146,11 +144,12 @@ LOGIN_REDIRECT_URL = 'dashboard'  # or 'home' if you prefer
 
 LOGOUT_REDIRECT_URL = 'home'  # or any other URL name you prefer
 
+# Use environment variables for email configuration
+EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', 'your-email@example.com')
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', 'your-email-password')
+
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
-EMAIL_HOST_USER = 'your-email@example.com'
-EMAIL_HOST_PASSWORD = 'your-email-password'
 
 DEFAULT_FROM_EMAIL = 'noreply@dropship-hq.com'
