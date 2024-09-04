@@ -185,7 +185,9 @@ $(document).ready(function() {
         // Check if already in edit mode
         if (row.hasClass('edit-mode')) {
             console.log('Already in edit mode, saving...');
-            saveOrder(orderId);
+            saveOrder(orderId, function() {
+                location.reload(); // Refresh the page after successful save
+            });
         } else {
             console.log('Entering edit mode');
             // Enter edit mode
@@ -232,7 +234,7 @@ $(document).ready(function() {
         row.find('.cancel-edit').remove();
     }
 
-    function saveOrder(orderId) {
+    function saveOrder(orderId, callback) {
         var row = $('#order-' + orderId);
         
         console.log('Saving order:', orderId);
@@ -265,6 +267,9 @@ $(document).ready(function() {
                 if (response.success) {
                     exitEditMode(orderId);
                     showToast('Order updated successfully', 'success');
+                    if (typeof callback === 'function') {
+                        callback(); // Call the callback function (page reload)
+                    }
                 } else {
                     showToast('Error saving order: ' + JSON.stringify(response.errors), 'error');
                 }
@@ -287,8 +292,8 @@ $(document).ready(function() {
                 headers: {'X-CSRFToken': '{{ csrf_token }}'},
                 success: function(response) {
                     if (response.success) {
-                        $('#order-' + orderId).remove();
                         showToast('Order deleted successfully', 'success');
+                        location.reload(); // Refresh the page after successful delete
                     } else {
                         showToast('Error deleting order', 'error');
                     }
