@@ -21,11 +21,18 @@ from django.urls import reverse_lazy
 from django.views.generic.edit import FormView
 from .forms import UserCreationForm
 from django.contrib.auth import views as auth_views
+from django.conf import settings as django_settings
+import stripe
+import json
+import os
 
 logger = logging.getLogger(__name__)
 
 def home(request):
-    return render(request, 'core/home.html')
+    stripe_key = django_settings.STRIPE_PUBLISHABLE_KEY
+    print(f"STRIPE_PUBLISHABLE_KEY from settings: {stripe_key}")
+    print(f"STRIPE_PUBLISHABLE_KEY from os.environ: {os.environ.get('STRIPE_PUBLISHABLE_KEY')}")
+    return render(request, 'core/home.html', {'stripe_key': stripe_key})
 
 
 @login_required
@@ -302,3 +309,24 @@ class CustomPasswordResetDoneView(auth_views.PasswordResetDoneView):
 
     def get_success_url(self):
         return reverse_lazy('home')  # Replace 'home' with your home page URL name
+
+@csrf_exempt
+def stripe_donation(request):
+    if request.method == 'POST':
+        stripe_secret_key = django_settings.STRIPE_SECRET_KEY
+        if not stripe_secret_key:
+            return JsonResponse({'error': 'Stripe secret key is not set'}, status=500)
+        
+        stripe.api_key = stripe_secret_key
+        try:
+            data = json.loads(request.body)
+            amount = int(float(data['amount']) * 100)  # Convert to cents
+            intent = stripe.PaymentIntent.create(
+                amount=amount,
+                currency='usd',
+                payment_method_types=['card'],
+            )
+            return JsonResponse({'clientSecret': intent.client_secret})
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=400)
+    return JsonResponse({'error': 'Invalid request method'}, status=400)
