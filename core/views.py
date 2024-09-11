@@ -5,7 +5,7 @@ from django.contrib import messages
 from django.http import JsonResponse
 from django.contrib.auth import logout
 from django.contrib.auth.forms import UserCreationForm
-from django.db.models import Sum, F, ExpressionWrapper, DecimalField, Count
+from django.db.models import Sum, F, ExpressionWrapper, DecimalField, Count, Q
 from .models import Order, APICredentials, BuyingGroup, Account, Merchant, Card
 from .forms import OrderForm, APICredentialsForm, DealCalculatorForm, BuyingGroupForm, AccountForm, MerchantForm, CardForm
 from datetime import datetime
@@ -32,9 +32,10 @@ def home(request):
 
 @login_required
 def dashboard(request):
-    # Get date range from request parameters
+    # Get date range and search query from request parameters
     start_date = request.GET.get('start_date')
     end_date = request.GET.get('end_date')
+    search_query = request.GET.get('search', '')
 
     # Base queryset
     orders = Order.objects.filter(user=request.user)
@@ -44,6 +45,14 @@ def dashboard(request):
         start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
         end_date = datetime.strptime(end_date, '%Y-%m-%d').date()
         orders = orders.filter(date__range=[start_date, end_date])
+
+    # Apply search filtering
+    if search_query:
+        orders = orders.filter(
+            Q(order_number__icontains=search_query) |
+            Q(tracking_number__icontains=search_query) |
+            Q(product__icontains=search_query)
+        )
 
     # Order the queryset
     orders = orders.order_by('-date')
@@ -88,6 +97,7 @@ def dashboard(request):
         'cards': cards,
         'start_date': start_date,
         'end_date': end_date,
+        'search_query': search_query,
     }
 
     return render(request, 'core/dashboard.html', context)
