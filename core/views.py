@@ -127,6 +127,12 @@ def edit_order(request, order_id):
             return JsonResponse({'success': True})
         else:
             return JsonResponse({'success': False, 'errors': form.errors})
+    elif request.method == 'GET':
+        form = OrderForm(instance=order, user=request.user)
+        return JsonResponse({
+            'success': True,
+            'html': render(request, 'core/edit_order_form.html', {'form': form, 'order_id': order_id}).content.decode('utf-8')
+        })
     
     return JsonResponse({'success': False, 'error': 'Invalid request method'})
 
