@@ -275,9 +275,10 @@ $(document).ready(function() {
             success: function(response) {
                 if (response.success) {
                     showToast('Order updated successfully', 'success');
-                    exitEditMode(orderId);
-                    // Update the row with new values
-                    updateRowValues(row, data);
+                    // Refresh the page after a short delay
+                    setTimeout(function() {
+                        location.reload();
+                    }, 1000); // 1000 milliseconds = 1 second
                 } else {
                     showToast('Error saving order: ' + JSON.stringify(response.errors), 'error');
                 }

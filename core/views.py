@@ -5,7 +5,8 @@ from django.contrib import messages
 from django.http import JsonResponse
 from django.contrib.auth import logout
 from django.contrib.auth.forms import UserCreationForm
-from django.db.models import Sum, F, ExpressionWrapper, DecimalField, Count, Q
+from django.db.models import Sum, F, DecimalField, Q
+from django.db.models.functions import Coalesce
 from .models import Order, APICredentials, BuyingGroup, Account, Merchant, Card
 from .forms import OrderForm, APICredentialsForm, DealCalculatorForm, BuyingGroupForm, AccountForm, MerchantForm, CardForm
 from datetime import datetime
@@ -20,15 +21,12 @@ from django.urls import reverse_lazy
 from django.views.generic.edit import FormView
 from .forms import UserCreationForm
 from django.contrib.auth import views as auth_views
-from django.shortcuts import render, redirect
-from django.contrib.auth.decorators import login_required
-from .forms import AccountForm, MerchantForm, CardForm, BuyingGroupForm, APICredentialsForm
-from .models import Account, Merchant, Card, BuyingGroup, APICredentials
 
 logger = logging.getLogger(__name__)
 
 def home(request):
     return render(request, 'core/home.html')
+
 
 @login_required
 def dashboard(request):
@@ -57,13 +55,16 @@ def dashboard(request):
     # Order the queryset
     orders = orders.order_by('-date')
 
-    # Calculate summary statistics with date filter
-    summary = {
-        'total_cost': orders.aggregate(total=Sum('cost'))['total'] or 0,
-        'total_reimbursed': orders.aggregate(total=Sum('reimbursed'))['total'] or 0,
-        'total_cash_back': orders.aggregate(total=Sum('cash_back'))['total'] or 0,
-    }
+    # Calculate summary statistics
+    summary = orders.aggregate(
+        total_cost=Coalesce(Sum('cost'), Decimal('0')),
+        total_reimbursed=Coalesce(Sum('reimbursed'), Decimal('0')),
+    )
     
+    # Calculate total cash back
+    total_cash_back = sum(order.cost * order.cash_back / 100 for order in orders)
+    summary['total_cash_back'] = Decimal(total_cash_back).quantize(Decimal('0.01'))
+
     # Calculate total profit
     summary['total_profit'] = (
         summary['total_reimbursed'] - summary['total_cost'] + summary['total_cash_back']
@@ -101,7 +102,6 @@ def dashboard(request):
     }
 
     return render(request, 'core/dashboard.html', context)
-
 @login_required
 def edit_order(request, order_id):
     order = get_object_or_404(Order, id=order_id, user=request.user)
