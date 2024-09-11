@@ -16,10 +16,15 @@ class OrderForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         user = kwargs.pop('user', None)
         super(OrderForm, self).__init__(*args, **kwargs)
+        
+        for field in self.fields:
+            self.fields[field].required = False
+        
+        # Make specific fields required
+        self.fields['date'].required = True
+
         if user:
             self.fields['buying_group'].queryset = BuyingGroup.objects.filter(user=user)
-        self.fields['buying_group'].required = False
-        self.fields['tracking_number'].required = False
 
 class APICredentialsForm(forms.ModelForm):
     class Meta:

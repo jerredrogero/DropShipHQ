@@ -12,20 +12,20 @@ class BuyingGroup(models.Model):
 
 class Order(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
-    date = models.DateField()
-    buying_group = models.ForeignKey(BuyingGroup, on_delete=models.SET_NULL, null=True, blank=True)
-    account = models.CharField(max_length=100)
-    order_number = models.CharField(max_length=100)
-    tracking_number = models.CharField(max_length=100, blank=True, null=True)
-    product = models.CharField(max_length=255)
-    merchant = models.CharField(max_length=100)
-    card = models.CharField(max_length=100)
-    cost = models.DecimalField(max_digits=10, decimal_places=2)
-    reimbursed = models.DecimalField(max_digits=10, decimal_places=2)
-    cash_back = models.DecimalField(max_digits=10, decimal_places=2)
+    date = models.DateField(null=True, blank=True)
+    buying_group = models.ForeignKey('BuyingGroup', on_delete=models.SET_NULL, null=True, blank=True)
+    account = models.CharField(max_length=100, null=True, blank=True)
+    order_number = models.CharField(max_length=100, null=True, blank=True)
+    tracking_number = models.CharField(max_length=100, null=True, blank=True)
+    product = models.CharField(max_length=200, null=True, blank=True)
+    merchant = models.CharField(max_length=100, null=True, blank=True)
+    card = models.CharField(max_length=100, null=True, blank=True)
+    cost = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    reimbursed = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    cash_back = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
 
     def __str__(self):
-        return f"{self.date} - {self.product}"
+        return f"Order {self.order_number} by {self.user.username}"
 
     @property
     def commission(self):
