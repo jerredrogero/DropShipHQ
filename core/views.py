@@ -32,12 +32,35 @@ def home(request):
 
 @login_required
 def dashboard(request):
-    orders = Order.objects.filter(user=request.user).order_by('-date')
-    buying_groups = BuyingGroup.objects.filter(user=request.user)
-    accounts = Account.objects.filter(user=request.user)
-    merchants = Merchant.objects.filter(user=request.user)
-    cards = Card.objects.filter(user=request.user)
+    # Get date range from request parameters
+    start_date = request.GET.get('start_date')
+    end_date = request.GET.get('end_date')
+
+    # Base queryset
+    orders = Order.objects.filter(user=request.user)
+
+    # Apply date filtering if dates are provided
+    if start_date and end_date:
+        start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
+        end_date = datetime.strptime(end_date, '%Y-%m-%d').date()
+        orders = orders.filter(date__range=[start_date, end_date])
+
+    # Order the queryset
+    orders = orders.order_by('-date')
+
+    # Calculate summary statistics with date filter
+    summary = {
+        'total_cost': orders.aggregate(total=Sum('cost'))['total'] or 0,
+        'total_reimbursed': orders.aggregate(total=Sum('reimbursed'))['total'] or 0,
+        'total_cash_back': orders.aggregate(total=Sum('cash_back'))['total'] or 0,
+    }
     
+    # Calculate total profit
+    summary['total_profit'] = (
+        summary['total_reimbursed'] - summary['total_cost'] + summary['total_cash_back']
+    )
+
+    # Handle form submission for adding new order
     if request.method == 'POST':
         form = OrderForm(request.POST, user=request.user)
         if form.is_valid():
@@ -49,14 +72,24 @@ def dashboard(request):
     else:
         form = OrderForm(user=request.user)
 
+    # Fetch other necessary data
+    buying_groups = BuyingGroup.objects.filter(user=request.user)
+    accounts = Account.objects.filter(user=request.user)
+    merchants = Merchant.objects.filter(user=request.user)
+    cards = Card.objects.filter(user=request.user)
+
     context = {
         'orders': orders,
+        'summary': summary,
         'form': form,
         'buying_groups': buying_groups,
         'accounts': accounts,
         'merchants': merchants,
         'cards': cards,
+        'start_date': start_date,
+        'end_date': end_date,
     }
+
     return render(request, 'core/dashboard.html', context)
 
 @login_required
