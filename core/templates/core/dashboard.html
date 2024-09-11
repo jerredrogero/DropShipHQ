@@ -132,24 +132,45 @@
             <tbody>
                 {% for order in orders %}
                 <tr id="order-{{ order.id }}">
-                    <td><span class="editable" data-field="date">{{ order.date|date:"Y-m-d" }}</span></td>
+                    <td><input type="date" class="editable form-control" data-field="date" value="{{ order.date|date:'Y-m-d' }}" disabled></td>
                     <td>
-                        <select class="editable" data-field="buying_group" disabled>
+                        <select class="editable form-control" data-field="buying_group" disabled>
                             <option value="">---------</option>
                             {% for group in buying_groups %}
                                 <option value="{{ group.id }}" {% if order.buying_group_id == group.id %}selected{% endif %}>{{ group.name }}</option>
                             {% endfor %}
                         </select>
                     </td>
-                    <td><span class="editable" data-field="account">{{ order.account }}</span></td>
-                    <td><span class="editable" data-field="order_number">{{ order.order_number }}</span></td>
-                    <td><span class="editable" data-field="tracking_number">{{ order.tracking_number }}</span></td>
-                    <td><span class="editable" data-field="product">{{ order.product }}</span></td>
-                    <td><span class="editable" data-field="merchant">{{ order.merchant }}</span></td>
-                    <td><span class="editable" data-field="card">{{ order.card }}</span></td>
-                    <td><span class="editable" data-field="cost">{{ order.cost }}</span></td>
-                    <td><span class="editable" data-field="reimbursed">{{ order.reimbursed }}</span></td>
-                    <td><span class="editable" data-field="cash_back">{{ order.cash_back }}</span></td>
+                    <td>
+                        <select class="editable form-control" data-field="account" disabled>
+                            <option value="">---------</option>
+                            {% for account in accounts %}
+                                <option value="{{ account.id }}" {% if order.account_id == account.id %}selected{% endif %}>{{ account.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </td>
+                    <td><input type="text" class="editable form-control" data-field="order_number" value="{{ order.order_number }}" disabled></td>
+                    <td><input type="text" class="editable form-control" data-field="tracking_number" value="{{ order.tracking_number }}" disabled></td>
+                    <td><input type="text" class="editable form-control" data-field="product" value="{{ order.product }}" disabled></td>
+                    <td>
+                        <select class="editable form-control" data-field="merchant" disabled>
+                            <option value="">---------</option>
+                            {% for merchant in merchants %}
+                                <option value="{{ merchant.id }}" {% if order.merchant_id == merchant.id %}selected{% endif %}>{{ merchant.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </td>
+                    <td>
+                        <select class="editable form-control" data-field="card" disabled>
+                            <option value="">---------</option>
+                            {% for card in cards %}
+                                <option value="{{ card.id }}" {% if order.card_id == card.id %}selected{% endif %}>{{ card.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </td>
+                    <td><input type="number" step="0.01" class="editable form-control" data-field="cost" value="{{ order.cost }}" disabled></td>
+                    <td><input type="number" step="0.01" class="editable form-control" data-field="reimbursed" value="{{ order.reimbursed }}" disabled></td>
+                    <td><input type="number" step="0.01" class="editable form-control" data-field="cash_back" value="{{ order.cash_back }}" disabled></td>
                     <td>
                         <button class="btn btn-sm btn-primary edit-order" data-order-id="{{ order.id }}">Edit</button>
                         <button class="btn btn-sm btn-danger delete-order" data-order-id="{{ order.id }}">Delete</button>
@@ -166,12 +187,20 @@
 $(document).ready(function() {
     // Function to show toast notification
     function showToast(message, type = 'success') {
-        // Assuming you have a function to show toasts, replace this with your actual implementation
-        if (typeof showToastNotification === 'function') {
-            showToastNotification(message, type);
-        } else {
-            console.log('Toast notification:', message, type);
-        }
+        var toast = $('<div class="toast" role="alert" aria-live="assertive" aria-atomic="true">')
+            .addClass('bg-' + (type === 'success' ? 'success' : 'danger'))
+            .addClass('text-white')
+            .css({
+                position: 'fixed',
+                top: '20px',
+                right: '20px',
+                'min-width': '200px',
+                'z-index': 9999
+            })
+            .append($('<div class="toast-body">').text(message));
+
+        $('body').append(toast);
+        toast.toast({ delay: 3000 }).toast('show');
     }
 
     // Edit button click handler
@@ -185,17 +214,14 @@ $(document).ready(function() {
         // Check if already in edit mode
         if (row.hasClass('edit-mode')) {
             console.log('Already in edit mode, saving...');
-            saveOrder(orderId, function() {
-                location.reload(); // Refresh the page after successful save
-            });
+            saveOrder(orderId);
         } else {
             console.log('Entering edit mode');
             // Enter edit mode
             row.addClass('edit-mode');
             
             // Make fields editable
-            row.find('.editable').attr('contenteditable', true);
-            row.find('select').prop('disabled', false);
+            row.find('.editable').prop('disabled', false);
             
             // Change button text
             $(this).text('Save');
@@ -224,8 +250,7 @@ $(document).ready(function() {
         row.removeClass('edit-mode');
         
         // Revert fields to non-editable
-        row.find('.editable').attr('contenteditable', false);
-        row.find('select').prop('disabled', true);
+        row.find('.editable').prop('disabled', true);
         
         // Change button back to "Edit"
         row.find('.edit-order').text('Edit');
@@ -234,28 +259,14 @@ $(document).ready(function() {
         row.find('.cancel-edit').remove();
     }
 
-    function saveOrder(orderId, callback) {
+    function saveOrder(orderId) {
         var row = $('#order-' + orderId);
-        
-        console.log('Saving order:', orderId);
-        
         var data = {};
         row.find('.editable').each(function() {
             var field = $(this).data('field');
-            var value = $(this).is('select') ? $(this).val() : $(this).text().trim();
+            var value = $(this).val();
             data[field] = value;
         });
-
-        console.log('Data to be sent:', data);
-
-        // Check if required fields are empty
-        var requiredFields = ['date', 'account', 'order_number', 'product', 'merchant', 'card', 'cost', 'reimbursed', 'cash_back'];
-        var emptyFields = requiredFields.filter(field => !data[field]);
-        
-        if (emptyFields.length > 0) {
-            showToast('Please fill in all required fields: ' + emptyFields.join(', '), 'error');
-            return;
-        }
 
         $.ajax({
             url: '/edit-order/' + orderId + '/',
@@ -263,23 +274,30 @@ $(document).ready(function() {
             data: data,
             headers: {'X-CSRFToken': '{{ csrf_token }}'},
             success: function(response) {
-                console.log('Server response:', response);
                 if (response.success) {
-                    exitEditMode(orderId);
                     showToast('Order updated successfully', 'success');
-                    if (typeof callback === 'function') {
-                        callback(); // Call the callback function (page reload)
-                    }
+                    exitEditMode(orderId);
+                    // Update the row with new values
+                    updateRowValues(row, data);
                 } else {
                     showToast('Error saving order: ' + JSON.stringify(response.errors), 'error');
                 }
             },
             error: function(xhr, status, error) {
-                console.log('AJAX error:', status, error);
-                console.log('Response text:', xhr.responseText);
                 showToast('Error saving order: ' + error, 'error');
             }
         });
+    }
+
+    function updateRowValues(row, data) {
+        for (var field in data) {
+            var element = row.find('[data-field="' + field + '"]');
+            if (element.is('select')) {
+                element.val(data[field]);
+            } else {
+                element.val(data[field]);
+            }
+        }
     }
 
     // Delete button click handler

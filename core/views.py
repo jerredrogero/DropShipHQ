@@ -6,8 +6,8 @@ from django.http import JsonResponse
 from django.contrib.auth import logout
 from django.contrib.auth.forms import UserCreationForm
 from django.db.models import Sum, F, ExpressionWrapper, DecimalField, Count
-from .models import Order, APICredentials, BuyingGroup
-from .forms import OrderForm, APICredentialsForm, DealCalculatorForm, BuyingGroupForm
+from .models import Order, APICredentials, BuyingGroup, Account, Merchant, Card
+from .forms import OrderForm, APICredentialsForm, DealCalculatorForm, BuyingGroupForm, AccountForm, MerchantForm, CardForm
 from datetime import datetime
 from django.utils import timezone
 import requests
@@ -20,6 +20,10 @@ from django.urls import reverse_lazy
 from django.views.generic.edit import FormView
 from .forms import UserCreationForm
 from django.contrib.auth import views as auth_views
+from django.shortcuts import render, redirect
+from django.contrib.auth.decorators import login_required
+from .forms import AccountForm, MerchantForm, CardForm, BuyingGroupForm, APICredentialsForm
+from .models import Account, Merchant, Card, BuyingGroup, APICredentials
 
 logger = logging.getLogger(__name__)
 
@@ -28,98 +32,36 @@ def home(request):
 
 @login_required
 def dashboard(request):
-    # Check if the remove filter button was clicked
-    if 'remove_filter' in request.GET:
-        return redirect('dashboard')
-
-    # Get the current date
-    today = timezone.now().date()
-
-    # Calculate the first and last day of the current month
-    first_day_of_month = today.replace(day=1)
-    last_day_of_month = today.replace(day=calendar.monthrange(today.year, today.month)[1])
-
-    # Get the date range from the request
-    start_date = request.GET.get('start_date')
-    end_date = request.GET.get('end_date')
-
-    # If no dates are provided, use the current month
-    if not start_date:
-        start_date = first_day_of_month
-    else:
-        start_date = parse_date(start_date) or first_day_of_month
-
-    if not end_date:
-        end_date = last_day_of_month
-    else:
-        end_date = parse_date(end_date) or last_day_of_month
-
-    # Ensure end_date is not before start_date
-    if end_date < start_date:
-        end_date = start_date
-
-    # Check if a custom date range is being used
-    is_filtered = start_date != first_day_of_month or end_date != last_day_of_month
-
-    # Filter orders based on the date range
-    orders = Order.objects.filter(
-        user=request.user,
-        date__range=[start_date, end_date]
-    ).order_by('-date')
-
-    # Calculate summary statistics
-    summary = orders.aggregate(
-        total_cost=Sum('cost'),
-        total_reimbursed=Sum('reimbursed'),
-        total_cash_back=Sum(ExpressionWrapper(
-            F('cost') * F('cash_back') / 100,
-            output_field=DecimalField(max_digits=10, decimal_places=2)
-        )),
-        order_count=Count('id')
-    )
-
-    # Calculate total profit
-    summary['total_profit'] = (
-        (summary['total_reimbursed'] or 0) +
-        (summary['total_cash_back'] or 0) -
-        (summary['total_cost'] or 0)
-    )
-
-    # Calculate average profit per order
-    if summary['order_count'] > 0:
-        summary['avg_profit_per_order'] = summary['total_profit'] / summary['order_count']
-    else:
-        summary['avg_profit_per_order'] = 0
-
+    orders = Order.objects.filter(user=request.user).order_by('-date')
+    buying_groups = BuyingGroup.objects.filter(user=request.user)
+    accounts = Account.objects.filter(user=request.user)
+    merchants = Merchant.objects.filter(user=request.user)
+    cards = Card.objects.filter(user=request.user)
+    
     if request.method == 'POST':
         form = OrderForm(request.POST, user=request.user)
         if form.is_valid():
             order = form.save(commit=False)
             order.user = request.user
             order.save()
-            messages.success(request, 'Order created successfully.')
+            messages.success(request, 'Order added successfully.')
             return redirect('dashboard')
     else:
         form = OrderForm(user=request.user)
 
     context = {
-        'form': form,
         'orders': orders,
-        'summary': summary,
-        'start_date': start_date,
-        'end_date': end_date,
-        'is_filtered': is_filtered,
-        'buying_groups': BuyingGroup.objects.filter(user=request.user),
+        'form': form,
+        'buying_groups': buying_groups,
+        'accounts': accounts,
+        'merchants': merchants,
+        'cards': cards,
     }
     return render(request, 'core/dashboard.html', context)
 
 @login_required
 def edit_order(request, order_id):
-    try:
-        order = Order.objects.get(id=order_id, user=request.user)
-    except Order.DoesNotExist:
-        return JsonResponse({'success': False, 'error': 'Order not found'}, status=404)
-    
+    order = get_object_or_404(Order, id=order_id, user=request.user)
     if request.method == 'POST':
         form = OrderForm(request.POST, instance=order, user=request.user)
         if form.is_valid():
@@ -127,14 +69,7 @@ def edit_order(request, order_id):
             return JsonResponse({'success': True})
         else:
             return JsonResponse({'success': False, 'errors': form.errors})
-    elif request.method == 'GET':
-        form = OrderForm(instance=order, user=request.user)
-        return JsonResponse({
-            'success': True,
-            'html': render(request, 'core/edit_order_form.html', {'form': form, 'order_id': order_id}).content.decode('utf-8')
-        })
-    
-    return JsonResponse({'success': False, 'error': 'Invalid request method'})
+    return JsonResponse({'success': False, 'errors': 'Invalid request method'})
 
 @login_required
 @csrf_exempt
@@ -164,32 +99,51 @@ class CustomSignupView(FormView):
 
 @login_required
 def settings(request):
-    api_credentials, created = APICredentials.objects.get_or_create(user=request.user)
+    accounts = Account.objects.filter(user=request.user)
+    merchants = Merchant.objects.filter(user=request.user)
+    cards = Card.objects.filter(user=request.user)
     buying_groups = BuyingGroup.objects.filter(user=request.user)
     
+    try:
+        api_credentials = APICredentials.objects.get(user=request.user)
+    except APICredentials.DoesNotExist:
+        api_credentials = None
+
     if request.method == 'POST':
-        if 'api_credentials' in request.POST:
-            api_form = APICredentialsForm(request.POST, instance=api_credentials)
-            if api_form.is_valid():
-                api_form.save()
-                messages.success(request, 'API credentials updated successfully.')
-                return redirect('settings')
-        elif 'buying_group' in request.POST:
-            buying_group_form = BuyingGroupForm(request.POST)
-            if buying_group_form.is_valid():
-                buying_group = buying_group_form.save(commit=False)
-                buying_group.user = request.user
-                buying_group.save()
-                messages.success(request, 'Buying group added successfully.')
-                return redirect('settings')
+        if 'add_account' in request.POST:
+            form = AccountForm(request.POST)
+        elif 'add_merchant' in request.POST:
+            form = MerchantForm(request.POST)
+        elif 'add_card' in request.POST:
+            form = CardForm(request.POST)
+        elif 'add_buying_group' in request.POST:
+            form = BuyingGroupForm(request.POST)
+        elif 'update_api_credentials' in request.POST:
+            form = APICredentialsForm(request.POST, instance=api_credentials)
+        
+        if form.is_valid():
+            instance = form.save(commit=False)
+            instance.user = request.user
+            instance.save()
+            messages.success(request, f"{form.instance._meta.verbose_name} added/updated successfully.")
+            return redirect('settings')
     else:
-        api_form = APICredentialsForm(instance=api_credentials)
+        account_form = AccountForm()
+        merchant_form = MerchantForm()
+        card_form = CardForm()
         buying_group_form = BuyingGroupForm()
-    
+        api_credentials_form = APICredentialsForm(instance=api_credentials)
+
     context = {
-        'api_form': api_form,
-        'buying_group_form': buying_group_form,
+        'accounts': accounts,
+        'merchants': merchants,
+        'cards': cards,
         'buying_groups': buying_groups,
+        'account_form': account_form,
+        'merchant_form': merchant_form,
+        'card_form': card_form,
+        'buying_group_form': buying_group_form,
+        'api_credentials_form': api_credentials_form,
     }
     return render(request, 'core/settings.html', context)
 
@@ -203,14 +157,19 @@ def delete_buying_group(request, pk):
 
 @login_required
 def bfmr_deals(request):
+    try:
+        api_credentials = APICredentials.objects.get(user=request.user)
+        if not api_credentials.api_key or not api_credentials.api_secret:
+            raise APICredentials.DoesNotExist
+    except APICredentials.DoesNotExist:
+        messages.warning(request, "Please set up your API credentials in the settings before accessing BFMR deals.")
+        return redirect('settings')
+
     api_url = "https://api.bfmr.com/api/v2/deals"
     
-    # Get the user's API credentials
-    api_credentials = APICredentials.objects.get(user=request.user)
-    
     headers = {
-        "API-KEY": api_credentials.bfmr_api_key,
-        "API-SECRET": api_credentials.bfmr_api_secret
+        "API-KEY": api_credentials.api_key,
+        "API-SECRET": api_credentials.api_secret
     }
     
     # You can add query parameters as needed
