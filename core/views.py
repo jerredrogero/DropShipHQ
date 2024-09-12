@@ -25,8 +25,19 @@ from django.conf import settings as django_settings
 import stripe
 import json
 import os
+from django.http import HttpResponse
+from django.contrib.auth.views import LoginView
+from django.contrib import messages
+import logging
 
 logger = logging.getLogger(__name__)
+
+class CustomLoginView(LoginView):
+    template_name = 'registration/login.html'
+
+    def form_invalid(self, form):
+        messages.error(self.request, "Invalid username or password. Please try again.")
+        return super().form_invalid(form)
 
 def home(request):
     stripe_key = django_settings.STRIPE_PUBLISHABLE_KEY
@@ -205,6 +216,7 @@ def delete_buying_group(request, pk):
         messages.success(request, 'Buying group deleted successfully.')
     return redirect('settings')
 
+@csrf_exempt
 @login_required
 def bfmr_deals(request):
     try:
@@ -215,43 +227,97 @@ def bfmr_deals(request):
         messages.warning(request, "Please set up your API credentials in the settings before accessing BFMR deals.")
         return redirect('settings')
 
-    api_url = "https://api.bfmr.com/api/v2/deals"
-    
-    headers = {
-        "API-KEY": api_credentials.api_key,
-        "API-SECRET": api_credentials.api_secret
-    }
-    
-    # You can add query parameters as needed
-    params = {
-        "page_size": 50,  # Adjust as needed
-        "page_no": 1,     # Adjust as needed
-        # Add other parameters as required
-    }
-    
-    try:
-        response = requests.get(api_url, headers=headers, params=params)
-        response.raise_for_status()
-        data = response.json()
-        deals = data.get('deals', [])
+    if request.method == 'POST':
+        deal_id = request.POST.get('deal_id')
+        item_id = request.POST.get('item_id')
+        item_qty = request.POST.get('item_qty')
         
-        # Process the deals to include price and discount information
-        for deal in deals:
-            deal['price'] = deal.get('price', 'N/A')
-            deal['discount'] = deal.get('discount', 'N/A')
-            if deal['price'] != 'N/A' and deal['discount'] != 'N/A':
-                deal['discounted_price'] = float(deal['price']) - float(deal['discount'])
+        logger.info(f"Attempting to reserve: deal_id={deal_id}, item_id={item_id}, item_qty={item_qty}")
+        
+        url = 'https://api.bfmr.com/api/v2/deals/reserve'
+        headers = {
+            'API-KEY': api_credentials.api_key,
+            'API-SECRET': api_credentials.api_secret,
+            'Content-Type': 'application/x-www-form-urlencoded'
+        }
+        data = {
+            'deal_id': deal_id,
+            'item_id': item_id,
+            'item_qty': item_qty
+        }
+        logger.info(f"Sending data to BFMR API: {data}")
+        try:
+            response = requests.post(url, headers=headers, data=data)
+            logger.info(f"BFMR API response: status_code={response.status_code}, content={response.text}")
+            
+            if response.status_code == 200:
+                messages.success(request, 'Quantity reserved successfully.')
+                logger.info("Reservation successful")
+                return JsonResponse({'status': 'success', 'message': 'Quantity reserved successfully.'})
             else:
-                deal['discounted_price'] = 'N/A'
+                error_message = response.json().get('message', 'Unknown error occurred')
+                messages.error(request, f'Failed to reserve quantity. Error: {error_message}')
+                logger.error(f"Reservation failed: {error_message}")
+                return JsonResponse({'status': 'error', 'message': error_message})
+        except requests.RequestException as e:
+            messages.error(request, f'Failed to reserve quantity. Error: {str(e)}')
+            logger.exception("Exception occurred while making API request")
+            return JsonResponse({'status': 'error', 'message': str(e)})
+
+    url = 'https://api.bfmr.com/api/v2/deals'
+    headers = {
+        'API-KEY': api_credentials.api_key,
+        'API-SECRET': api_credentials.api_secret
+    }
+    params = {
+        'page_size': 10,
+        'page_no': 1,
+        'exclusive_deals_only': '0'
+    }
+    try:
+        response = requests.get(url, headers=headers, params=params)
+        response.raise_for_status()
+        deals_data = response.json().get('deals', [])
+        
+        # Process the deals to include price difference information
+        deals = []
+        for deal in deals_data:
+            retail_price = float(deal.get('retail_price', 0))
+            payout_price = float(deal.get('payout_price', 0))
+            price_difference = payout_price - retail_price
+            difference_percentage = (price_difference / retail_price) * 100 if retail_price > 0 else 0
+            
+            # Extract the URL from the nested structure
+            product_url = ''
+            items = deal.get('items', [])
+            if items:
+                retailer_links = items[0].get('retailer_links', [])
+                if retailer_links:
+                    product_url = retailer_links[0].get('url', '')
+            
+            processed_deal = {
+                'deal_id': deal.get('deal_id'),
+                'title': deal.get('title'),
+                'retail_price': '{:.2f}'.format(retail_price),
+                'payout_price': '{:.2f}'.format(payout_price),
+                'price_difference': '{:.2f}'.format(price_difference),
+                'difference_percentage': '{:.2f}'.format(difference_percentage),
+                'product_url': product_url,  # Use the extracted URL
+                'item_id': items[0].get('id') if items else '',
+                'items': items
+            }
+            deals.append(processed_deal)
+        
+        # Log the structure of the first deal for debugging
+        if deals:
+            logger.info(f"First deal structure: {json.dumps(deals[0], indent=2)}")
+        else:
+            logger.warning("No deals returned from the API")
         
     except requests.RequestException as e:
         deals = []
-        messages.error(request, "Failed to fetch deals from BFMR. Please check your API credentials.")
-        # Log the error
-        logger.error(f"BFMR API request failed: {str(e)}")
-        if response:
-            logger.error(f"Response status: {response.status_code}")
-            logger.error(f"Response content: {response.text}")
+        messages.error(request, f'Failed to fetch active deals. Error: {str(e)}')
+        logger.exception("Exception occurred while fetching deals")
     
     return render(request, 'core/bfmr_deals.html', {'deals': deals})
 
@@ -330,3 +396,49 @@ def stripe_donation(request):
         except Exception as e:
             return JsonResponse({'error': str(e)}, status=400)
     return JsonResponse({'error': 'Invalid request method'}, status=400)
+
+@login_required
+def get_item_id(request):
+    deal_id = request.GET.get('deal_id')
+    logger.info(f"Attempting to get item_id for deal_id: {deal_id}")
+
+    try:
+        api_credentials = APICredentials.objects.get(user=request.user)
+    except APICredentials.DoesNotExist:
+        logger.error("API credentials not found for user")
+        return JsonResponse({'error': 'API credentials not set up'}, status=400)
+
+    url = f'https://api.bfmr.com/api/v2/deals/{deal_id}'
+    headers = {
+        'API-KEY': api_credentials.api_key,
+        'API-SECRET': api_credentials.api_secret
+    }
+    
+    try:
+        response = requests.get(url, headers=headers)
+        response.raise_for_status()
+        deal_data = response.json()
+        logger.info(f"API response for deal {deal_id}: {json.dumps(deal_data, indent=2)}")
+
+        items = deal_data.get('items', [])
+        if items and len(items) > 0:
+            item_id = items[0].get('id')
+            if item_id:
+                logger.info(f"Found item_id: {item_id} for deal_id: {deal_id}")
+                return JsonResponse({'item_id': item_id})
+            else:
+                logger.warning(f"No 'id' found in first item for deal_id: {deal_id}")
+                return JsonResponse({'error': 'No item id found in deal data'}, status=404)
+        else:
+            logger.warning(f"No items found for deal_id: {deal_id}")
+            return JsonResponse({'error': 'No items found for this deal'}, status=404)
+    except requests.RequestException as e:
+        logger.exception(f"Error fetching deal data: {str(e)}")
+        return JsonResponse({'error': f'Error fetching deal data: {str(e)}'}, status=500)
+    except json.JSONDecodeError as e:
+        logger.exception(f"Error decoding JSON response: {str(e)}")
+        return JsonResponse({'error': 'Invalid JSON response from API'}, status=500)
+    except Exception as e:
+        logger.exception(f"Unexpected error in get_item_id: {str(e)}")
+        return JsonResponse({'error': 'An unexpected error occurred'}, status=500)
+

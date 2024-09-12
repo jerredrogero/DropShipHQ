@@ -3,17 +3,43 @@
 {% block content %}
 <div class="container mt-4">
     <h1>BFMR Deals</h1>
+    <div id="messages">
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert {% if message.tags %}alert-{{ message.tags }}{% endif %}">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endif %}
+    </div>
     {% if deals %}
         <div class="row">
         {% for deal in deals %}
             <div class="col-md-4 mb-4">
                 <div class="card">
-                    <img src="{{ deal.image_url }}" class="card-img-top" alt="{{ deal.title }}">
                     <div class="card-body">
                         <h5 class="card-title">{{ deal.title }}</h5>
-                        <p class="card-text">Price: ${{ deal.price }}</p>
-                        <p class="card-text">Discount: {{ deal.discount_percentage }}%</p>
+                        <p class="card-text">Retail Price: ${{ deal.retail_price }}</p>
+                        <p class="card-text">Payout Price: ${{ deal.payout_price }}</p>
+                        {% with price_diff=deal.price_difference|floatformat:2 %}
+                            {% if price_diff|first == '-' %}
+                                <p class="card-text text-danger">Price Difference: -${{ price_diff|slice:"1:" }} ({{ deal.difference_percentage }}%)</p>
+                            {% else %}
+                                <p class="card-text text-success">Price Difference: ${{ price_diff }} ({{ deal.difference_percentage }}%)</p>
+                            {% endif %}
+                        {% endwith %}
                         <a href="{{ deal.product_url }}" class="btn btn-primary" target="_blank">View Deal</a>
+                        <form class="reserve-form mt-2" data-deal-id="{{ deal.deal_id }}">
+                            {% csrf_token %}
+                            <input type="hidden" name="deal_id" value="{{ deal.deal_id }}">
+                            <input type="hidden" name="item_id" value="{{ deal.item_id }}">
+                            <div class="form-group">
+                                <label for="item_qty">Quantity:</label>
+                                <input type="number" name="item_qty" id="item_qty" min="1" required class="form-control">
+                            </div>
+                            <button type="submit" class="btn btn-secondary mt-2">Reserve</button>
+                        </form>
+                        <div class="reservation-status mt-2"></div>
                     </div>
                 </div>
             </div>
@@ -23,4 +49,41 @@
         <p>No deals available at the moment. Please check back later.</p>
     {% endif %}
 </div>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+$(document).ready(function() {
+    $('.reserve-form').on('submit', function(e) {
+        e.preventDefault();
+        var form = $(this);
+        var statusDiv = form.siblings('.reservation-status');
+
+        $.ajax({
+            url: '{% url "bfmr_deals" %}',
+            type: 'POST',
+            data: form.serialize(),
+            dataType: 'json',
+            success: function(data) {
+                if (data.status === 'success') {
+                    statusDiv.html('<div class="alert alert-success">' + data.message + '</div>');
+                } else {
+                    var errorMessage = data.message;
+                    if (data.details && data.details.length > 0) {
+                        errorMessage += '<ul>';
+                        data.details.forEach(function(detail) {
+                            errorMessage += '<li>' + detail + '</li>';
+                        });
+                        errorMessage += '</ul>';
+                    }
+                    statusDiv.html('<div class="alert alert-danger">' + errorMessage + '</div>');
+                }
+            },
+            error: function(jqXHR, textStatus, errorThrown) {
+                var errorMsg = jqXHR.responseJSON ? jqXHR.responseJSON.error : 'An error occurred. Please try again.';
+                statusDiv.html('<div class="alert alert-danger">' + errorMsg + '</div>');
+            }
+        });
+    });
+});
+</script>
 {% endblock %}

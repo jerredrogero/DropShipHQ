@@ -62,8 +62,8 @@ class Order(models.Model):
 
 class APICredentials(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
-    api_key = models.CharField(max_length=100, null=True, blank=True)
-    api_secret = models.CharField(max_length=100, null=True, blank=True)
+    api_key = models.CharField(max_length=255)
+    api_secret = models.CharField(max_length=255)
 
     def __str__(self):
         return f"API Credentials for {self.user.username}"

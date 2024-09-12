@@ -5,9 +5,10 @@ from core.views import bfmr_deals, stripe_donation
 from django.contrib.auth.forms import UserCreationForm
 from django.utils.translation import gettext_lazy as _
 from .forms import UserCreationForm
-from .views import CustomPasswordResetDoneView
+from .views import CustomPasswordResetDoneView, bfmr_deals
 from django.contrib import messages
-
+from .views import bfmr_deals, get_item_id
+from .views import CustomLoginView
 
 class CustomLoginView(auth_views.LoginView):
     def get_form(self, form_class=None):
@@ -38,6 +39,7 @@ class CustomPasswordResetView(auth_views.PasswordResetView):
         return super().form_valid(form)
 
 urlpatterns = [
+    path('login/', CustomLoginView.as_view(), name='login'),
     path('', views.home, name='home'),
     path('dashboard/', views.dashboard, name='dashboard'),
     path('signup/', CustomSignupView.as_view(), name='signup'),
@@ -53,4 +55,6 @@ urlpatterns = [
     path('reset/<uidb64>/<token>/', auth_views.PasswordResetConfirmView.as_view(), name='password_reset_confirm'),
     path('reset/done/', auth_views.PasswordResetCompleteView.as_view(), name='password_reset_complete'),
     path('stripe-donation/', stripe_donation, name='stripe_donation'),
+    path('bfmr-deals/', bfmr_deals, name='bfmr_deals'),
+    path('get-item-id/', get_item_id, name='get_item_id'),
 ]

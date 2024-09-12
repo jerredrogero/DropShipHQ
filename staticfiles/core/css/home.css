@@ -1,0 +1,41 @@
+.donation-section {
+    max-width: 500px;
+    margin: 2rem auto;
+    padding: 2rem;
+    background-color: #f8f9fa;
+    border-radius: 10px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+.donation-section h2 {
+    color: #007bff;
+    margin-bottom: 1rem;
+}
+.donation-section p {
+    margin-bottom: 1.5rem;
+}
+#card-element {
+    padding: 10px;
+}
+.btn-primary {
+    background-color: #007bff;
+    border-color: #007bff;
+}
+.btn-primary:hover {
+    background-color: #0056b3;
+    border-color: #0056b3;
+}
+
+.nav-tabs {
+    margin-bottom: 1rem;
+}
+
+.crypto-address {
+    word-break: break-all;
+    background-color: #e9ecef;
+    padding: 0.5rem;
+    border-radius: 0.25rem;
+}
+
+.tab-content {
+    padding-top: 1rem;
+}
