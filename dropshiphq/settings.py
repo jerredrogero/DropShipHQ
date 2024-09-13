@@ -58,7 +58,7 @@ else:
 if not DEBUG:
     SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
-ALLOWED_HOSTS = os.environ.get('dropshiphq-1c235a14c0ab.herokuapp.com', 'DJANGO_ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
+ALLOWED_HOSTS = os.environ.get('DJANGO_ALLOWED_HOSTS', 'localhost,127.0.0.1,dropshiphq-1c235a14c0ab.herokuapp.com,buyinggroupro.com').split(',')
 
 
 # Application definition
