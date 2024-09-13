@@ -1,12 +1,22 @@
-/* Custom styles for DropshipHQ */
-
 body {
     font-family: 'Roboto', sans-serif;
 }
 
+/* Navbar brand styling */
 .navbar-brand {
-    font-weight: bold;
-    font-size: 1.5rem;
+    color: #007bff
+}
+
+/* Navbar links default state */
+.navbar-nav .nav-item .nav-link {
+    color: rgba(0,0,0,.5);
+    transition: color 0.3s ease;
+}
+
+/* Navbar links hover state */
+.navbar-nav .nav-item .nav-link:hover,
+.navbar-nav .nav-item .nav-link:focus {
+    color: #007bff
 }
 
 .hero-section {
