@@ -86,6 +86,11 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'core.middleware.PermissionsPolicyMiddleware',
 ]
+if not DEBUG:
+    # Enable WhiteNoise for efficient static file serving in production
+    MIDDLEWARE = ['django.middleware.security.SecurityMiddleware',
+                  'whitenoise.middleware.WhiteNoiseMiddleware'] + MIDDLEWARE[1:]
+    STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 from django.contrib.messages import constants as messages
 MESSAGE_TAGS = {
@@ -207,9 +212,3 @@ LOGGING = {
         },
     },
 }
-
-
-if not DEBUG:
-    # Enable WhiteNoise for efficient static file serving in production
-    MIDDLEWARE.insert(1, 'whitenoise.middleware.WhiteNoiseMiddleware')
-    STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
