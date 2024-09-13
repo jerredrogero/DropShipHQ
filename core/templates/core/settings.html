@@ -99,7 +99,13 @@
                 <div class="card-body">
                     <ul class="list-group mb-3">
                         {% for buying_group in buying_groups %}
-                            <li class="list-group-item">{{ buying_group.name }}</li>
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                {{ buying_group.name }}
+                                <form method="post" action="{% url 'delete_buying_group' buying_group.id %}" style="display:inline;">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                                </form>
+                            </li>
                         {% empty %}
                             <li class="list-group-item text-muted">BFMR, Buying Group, etc.</li>
                         {% endfor %}
@@ -109,7 +115,7 @@
                         <div class="form-group">
                             {{ buying_group_form.name|add_class:"form-control" }}
                         </div>
-                    </br>
+                        </br>
                         <button type="submit" name="add_buying_group" class="btn btn-primary">Add Buying Group</button>
                     </form>
                 </div>
@@ -132,6 +138,7 @@
                             <label for="{{ api_credentials_form.api_secret.id_for_label }}">API Secret</label>
                             {{ api_credentials_form.api_secret|add_class:"form-control" }}
                         </div>
+                        </br>
                         <button type="submit" name="update_api_credentials" class="btn btn-primary">Update API Credentials</button>
                     </form>
                 </div>

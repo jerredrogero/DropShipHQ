@@ -80,7 +80,11 @@ def dashboard(request):
     )
     
     # Calculate total cash back
-    total_cash_back = sum(order.cost * order.cash_back / 100 for order in orders)
+    total_cash_back = sum(
+        (Decimal(order.cost) if order.cost is not None else Decimal(0)) * 
+        (Decimal(order.cash_back) if order.cash_back is not None else Decimal(0)) / Decimal(100) 
+        for order in orders
+    )
     summary['total_cash_back'] = Decimal(total_cash_back).quantize(Decimal('0.01'))
 
     # Calculate total profit
@@ -209,11 +213,10 @@ def settings(request):
     return render(request, 'core/settings.html', context)
 
 @login_required
-def delete_buying_group(request, pk):
-    buying_group = get_object_or_404(BuyingGroup, pk=pk, user=request.user)
-    if request.method == 'POST':
-        buying_group.delete()
-        messages.success(request, 'Buying group deleted successfully.')
+def delete_buying_group(request, buying_group_id):
+    buying_group = get_object_or_404(BuyingGroup, id=buying_group_id)
+    buying_group.delete()
+    messages.success(request, 'Buying group deleted successfully.')
     return redirect('settings')
 
 @csrf_exempt
