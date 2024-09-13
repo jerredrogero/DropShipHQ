@@ -29,6 +29,7 @@ from django.http import HttpResponse
 from django.contrib.auth.views import LoginView
 from django.contrib import messages
 import logging
+from django.contrib.auth import authenticate
 
 logger = logging.getLogger(__name__)
 
@@ -36,8 +37,21 @@ class CustomLoginView(LoginView):
     template_name = 'registration/login.html'
 
     def form_invalid(self, form):
-        messages.error(self.request, "Invalid username or password. Please try again.")
-        return super().form_invalid(form)
+        response = super().form_invalid(form)
+        username = form.cleaned_data.get('username')
+        password = form.cleaned_data.get('password')
+        user = authenticate(self.request, username=username, password=password)
+        
+        if user is None:
+            if username and self.request.user.__class__.objects.filter(username=username).exists():
+                error_message = 'Incorrect password. Please try again.'
+            else:
+                error_message = 'Invalid username or password. Please try again.'
+        else:
+            error_message = 'An unexpected error occurred. Please try again.'
+
+        form.add_error(None, error_message)
+        return response
 
 def home(request):
     stripe_key = django_settings.STRIPE_PUBLISHABLE_KEY
@@ -444,4 +458,3 @@ def get_item_id(request):
     except Exception as e:
         logger.exception(f"Unexpected error in get_item_id: {str(e)}")
         return JsonResponse({'error': 'An unexpected error occurred'}, status=500)
-
