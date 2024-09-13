@@ -1,0 +1,162 @@
+{% extends 'core/base.html' %}
+{% load form_tags %}
+{% load custom_filters %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-primary">
+                    <ul class="nav nav-tabs card-header-tabs" id="authTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active text-white" id="login-tab" data-bs-toggle="tab" data-bs-target="#login" type="button" role="tab" aria-controls="login" aria-selected="true">Login</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link text-white" id="signup-tab" data-bs-toggle="tab" data-bs-target="#signup" type="button" role="tab" aria-controls="signup" aria-selected="false">Sign Up</button>
+                        </li>
+                    </ul>
+                </div>
+                <div class="card-body">
+                    <div class="tab-content" id="authTabsContent">
+                        <!-- Login Tab -->
+                        <div class="tab-pane fade show active" id="login" role="tabpanel" aria-labelledby="login-tab">
+                            <form method="post" action="{% url 'auth' %}">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="login">
+                                {% if login_form.non_field_errors %}
+                                    <div class="alert alert-danger" role="alert">
+                                        {{ login_form.non_field_errors.0 }}
+                                    </div>
+                                {% endif %}
+                                <div class="form-group">
+                                    <label for="login-username">Username</label>
+                                    <input type="text" name="username" class="form-control {% if login_form.username.errors %}is-invalid{% endif %}" id="login-username" required>
+                                    {% if login_form.username.errors %}
+                                        <div class="invalid-feedback">
+                                            {{ login_form.username.errors.0 }}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                                <div class="form-group">
+                                    <label for="login-password">Password</label>
+                                    <input type="password" name="password" class="form-control {% if login_form.password.errors %}is-invalid{% endif %}" id="login-password" required>
+                                    {% if login_form.password.errors %}
+                                        <div class="invalid-feedback">
+                                            {{ login_form.password.errors.0 }}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                                <br>
+                                <button type="submit" class="btn btn-primary btn-block">Login</button>
+                            </form>
+                        </div>
+                        
+                        <!-- Signup Tab -->
+                        <div class="tab-pane fade" id="signup" role="tabpanel" aria-labelledby="signup-tab">
+                            <form method="post" action="{% url 'auth' %}">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="signup">
+                                {% if signup_form.non_field_errors %}
+                                    <div class="alert alert-danger" role="alert">
+                                        {{ signup_form.non_field_errors.0 }}
+                                    </div>
+                                {% endif %}
+                                <div class="form-group">
+                                    <label for="signup-username">Username</label>
+                                    <input type="text" name="username" class="form-control {% if signup_form.username.errors %}is-invalid{% endif %}" id="signup-username" required>
+                                    {% if signup_form.username.errors %}
+                                        <div class="invalid-feedback">
+                                            {{ signup_form.username.errors.0 }}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                                <div class="form-group">
+                                    <label for="signup-password1">Password</label>
+                                    <input type="password" name="password1" class="form-control {% if signup_form.password1.errors %}is-invalid{% endif %}" id="signup-password1" required>
+                                    {% if signup_form.password1.errors %}
+                                        <div class="invalid-feedback">
+                                            {{ signup_form.password1.errors.0 }}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                                <div class="form-group">
+                                    <label for="signup-password2">Confirm Password</label>
+                                    <input type="password" name="password2" class="form-control {% if signup_form.password2.errors %}is-invalid{% endif %}" id="signup-password2" required>
+                                    {% if signup_form.password2.errors %}
+                                        <div class="invalid-feedback">
+                                            {{ signup_form.password2.errors.0 }}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                                <br>
+                                <button type="submit" class="btn btn-primary btn-block">Sign Up</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer text-center">
+                    <p class="mb-0" id="login-footer">
+                        <a href="{% url 'password_reset' %}">Forgot Password?</a>
+                    </p>
+                    <p class="mb-0 d-none" id="signup-footer">
+                        By signing up, you agree to our <a href="{% url 'terms_of_service' %}">Terms of Service</a> and <a href="{% url 'privacy_policy' %}">Privacy Policy</a>.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        var triggerTabList = [].slice.call(document.querySelectorAll('#authTabs button'))
+        var loginFooter = document.getElementById('login-footer');
+        var signupFooter = document.getElementById('signup-footer');
+
+        triggerTabList.forEach(function (triggerEl) {
+            var tabTrigger = new bootstrap.Tab(triggerEl)
+            
+            triggerEl.addEventListener('click', function (event) {
+                event.preventDefault()
+                tabTrigger.show()
+            })
+
+            triggerEl.addEventListener('shown.bs.tab', function (event) {
+                event.target.classList.remove('text-white');
+                triggerTabList.forEach(function(tab) {
+                    if (tab !== event.target) {
+                        tab.classList.add('text-white');
+                    }
+                });
+
+                // Toggle footer content
+                if (event.target.id === 'login-tab') {
+                    loginFooter.classList.remove('d-none');
+                    signupFooter.classList.add('d-none');
+                } else if (event.target.id === 'signup-tab') {
+                    loginFooter.classList.add('d-none');
+                    signupFooter.classList.remove('d-none');
+                }
+            })
+        })
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const tab = urlParams.get('tab');
+        if (tab === 'signup') {
+            document.getElementById('signup-tab').click();
+        } else {
+            document.getElementById('login-tab').classList.remove('text-white');
+        }
+
+        // If there are error messages, make sure the appropriate tab is active
+        if (document.querySelector('#login .alert-danger')) {
+            document.getElementById('login-tab').click();
+        } else if (document.querySelector('#signup .alert-danger')) {
+            document.getElementById('signup-tab').click();
+        }
+    });
+</script>
+{% endblock %}

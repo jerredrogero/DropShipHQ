@@ -2,34 +2,11 @@ from django.urls import path, reverse_lazy
 from . import views
 from django.contrib.auth import views as auth_views
 from core.views import bfmr_deals, stripe_donation
-from django.contrib.auth.forms import UserCreationForm
 from django.utils.translation import gettext_lazy as _
-from .forms import UserCreationForm
-from .views import CustomPasswordResetDoneView, bfmr_deals
+from .views import bfmr_deals
 from django.contrib import messages
 from .views import bfmr_deals, get_item_id
-from .views import CustomLoginView
 
-class CustomLoginView(auth_views.LoginView):
-    def get_form(self, form_class=None):
-        form = super().get_form(form_class)
-        form.fields['password'].label = _("Password")
-        return form
-
-class UserCreationForm(UserCreationForm):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.fields['password1'].label = _("Password")
-        self.fields['password2'].label = _("Password confirmation")
-
-class CustomSignupView(auth_views.FormView):
-    form_class = UserCreationForm
-    template_name = 'core/signup.html'
-    success_url = '/'  # Redirect to home page after successful signup
-
-    def form_valid(self, form):
-        form.save()
-        return super().form_valid(form)
 
 class CustomPasswordResetView(auth_views.PasswordResetView):
     success_url = reverse_lazy('home')  # Replace 'home' with your home page URL name
@@ -39,12 +16,8 @@ class CustomPasswordResetView(auth_views.PasswordResetView):
         return super().form_valid(form)
 
 urlpatterns = [
-    path('login/', CustomLoginView.as_view(), name='login'),
     path('', views.home, name='home'),
     path('dashboard/', views.dashboard, name='dashboard'),
-    path('signup/', CustomSignupView.as_view(), name='signup'),
-    path('login/', CustomLoginView.as_view(template_name='core/login.html'), name='login'),
-    path('logout/', views.logout_view, name='logout'),
     path('delete-order/<int:order_id>/', views.delete_order, name='delete_order'),
     path('settings/', views.settings, name='settings'),
     path('bfmr-deals/', bfmr_deals, name='bfmr_deals'),
@@ -57,4 +30,8 @@ urlpatterns = [
     path('stripe-donation/', stripe_donation, name='stripe_donation'),
     path('bfmr-deals/', bfmr_deals, name='bfmr_deals'),
     path('get-item-id/', get_item_id, name='get_item_id'),
+    path('auth/', views.AuthView.as_view(), name='auth'),
+    path('logout/', auth_views.LogoutView.as_view(next_page='home'), name='logout'),
+    path('terms-of-service/', views.TermsOfServiceView.as_view(), name='terms_of_service'),
+    path('privacy-policy/', views.PrivacyPolicyView.as_view(), name='privacy_policy'),
 ]

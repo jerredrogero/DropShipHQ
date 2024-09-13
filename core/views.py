@@ -26,32 +26,17 @@ import stripe
 import json
 import os
 from django.http import HttpResponse
-from django.contrib.auth.views import LoginView
 from django.contrib import messages
 import logging
 from django.contrib.auth import authenticate
+from django.shortcuts import render, redirect
+from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
+from django.contrib.auth import login, authenticate
+from django.views import View
+from django.contrib import messages
+from django.views.generic import TemplateView
 
 logger = logging.getLogger(__name__)
-
-class CustomLoginView(LoginView):
-    template_name = 'registration/login.html'
-
-    def form_invalid(self, form):
-        response = super().form_invalid(form)
-        username = form.cleaned_data.get('username')
-        password = form.cleaned_data.get('password')
-        user = authenticate(self.request, username=username, password=password)
-        
-        if user is None:
-            if username and self.request.user.__class__.objects.filter(username=username).exists():
-                error_message = 'Incorrect password. Please try again.'
-            else:
-                error_message = 'Invalid username or password. Please try again.'
-        else:
-            error_message = 'An unexpected error occurred. Please try again.'
-
-        form.add_error(None, error_message)
-        return response
 
 def home(request):
     stripe_key = django_settings.STRIPE_PUBLISHABLE_KEY
@@ -59,6 +44,48 @@ def home(request):
     print(f"STRIPE_PUBLISHABLE_KEY from os.environ: {os.environ.get('STRIPE_PUBLISHABLE_KEY')}")
     return render(request, 'core/home.html', {'stripe_key': stripe_key})
 
+class AuthView(View):
+    template_name = 'registration/auth.html'
+
+    def get(self, request):
+        login_form = AuthenticationForm()
+        signup_form = UserCreationForm()
+        return render(request, self.template_name, {
+            'login_form': login_form,
+            'signup_form': signup_form
+        })
+
+    def post(self, request):
+        action = request.POST.get('action')
+        if action == 'login':
+            login_form = AuthenticationForm(data=request.POST)
+            signup_form = UserCreationForm()
+            if login_form.is_valid():
+                username = login_form.cleaned_data.get('username')
+                password = login_form.cleaned_data.get('password')
+                user = authenticate(username=username, password=password)
+                if user is not None:
+                    login(request, user)
+                    messages.success(request, f"Welcome back, {username}!")
+                    return redirect('dashboard')
+            else:
+                login_form.add_error(None, "Invalid username or password.")
+        elif action == 'signup':
+            signup_form = UserCreationForm(data=request.POST)
+            login_form = AuthenticationForm()
+            if signup_form.is_valid():
+                user = signup_form.save()
+                login(request, user)
+                messages.success(request, f"Account created successfully. Welcome, {user.username}!")
+                return redirect('dashboard')
+        else:
+            login_form = AuthenticationForm()
+            signup_form = UserCreationForm()
+
+        return render(request, self.template_name, {
+            'login_form': login_form,
+            'signup_form': signup_form
+        })
 
 @login_required
 def dashboard(request):
@@ -458,3 +485,9 @@ def get_item_id(request):
     except Exception as e:
         logger.exception(f"Unexpected error in get_item_id: {str(e)}")
         return JsonResponse({'error': 'An unexpected error occurred'}, status=500)
+
+class TermsOfServiceView(TemplateView):
+    template_name = 'core/terms_of_service.html'
+
+class PrivacyPolicyView(TemplateView):
+    template_name = 'core/privacy_policy.html'

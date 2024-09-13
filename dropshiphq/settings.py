@@ -174,9 +174,9 @@ django_heroku.settings(locals())
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-LOGIN_REDIRECT_URL = 'dashboard'  # or 'home' if you prefer
-
-LOGOUT_REDIRECT_URL = 'home'  # or any other URL name you prefer
+LOGIN_URL = 'auth'
+LOGIN_REDIRECT_URL = 'dashboard'  # or wherever you want users to go after logging in
+LOGOUT_REDIRECT_URL = 'home'  # or wherever you want users to go after logging out
 
 # Use environment variables for email configuration
 EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', 'your-email@example.com')

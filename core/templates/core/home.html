@@ -17,7 +17,7 @@
                 <h1 class="display-4 fw-bold">Streamline Your Dropshipping Today!</h1>
                 <p class="lead">BuyingGroupPro is your all-in-one platform for building a successful reselling business. Find products, manage inventory, and grow your volume with ease.</p>
                 <div class="d-grid gap-2 d-md-flex justify-content-md-start mt-4">
-                    <a class="btn btn-primary btn-lg px-4 me-md-2" href="{% url 'signup' %}" role="button">Get Started</a>
+                    <a class="btn btn-primary btn-lg px-4 me-md-2" href="{% url 'auth' %}" role="button">Get Started</a>
                     <a class="btn btn-outline-secondary btn-lg px-4" href="#features" role="button">Learn More</a>
                 </div>
             </div>
@@ -25,34 +25,39 @@
     </div>
 </div>
 
-<div class="container mt-5" id="features">
-    <h2 class="text-center mb-4">Why Choose BuyingGroupPro?</h2>
-    <div class="row">
+<div class="container my-5" id="features">
+    <h2 class="text-center mb-5">Why Choose BuyingGroupPro?</h2>
+    <div class="row g-4">
         <div class="col-md-4">
-            <div class="card h-100 feature-card">
-                <div class="card-body text-center">
-                    <i class="fas fa-search fa-3x mb-3 feature-icon"></i>
-                    <h5 class="card-title">Analytics & Insights</h5>
-                    <p class="card-text">Make data-driven decisions with our comprehensive analytics dashboard.</p>
+            <div class="feature-wrapper text-center">
+                <i class="fas fa-chart-line fa-3x mb-3 text-primary"></i>
+                <div class="card h-100 feature-card">
+                    <div class="card-body">
+                        <h5 class="card-title">Analytics & Insights</h5>
+                        <p class="card-text">See summary data on all your orders. Sort by date or search by order number.</p>
+                    </div>
                 </div>
             </div>
         </div>
         <div class="col-md-4">
-            <div class="card h-100 feature-card">
-                <div class="card-body text-center">
-                    <i class="fas fa-cogs fa-3x mb-3 feature-icon"></i>
-                    <h5 class="card-title">Automation Tools</h5>
-                    <p class="card-text">Streamline your operations with our powerful automation features.</p>
+            <div class="feature-wrapper text-center">
+                <i class="fas fa-cogs fa-3x mb-3 text-primary"></i>
+                <div class="card h-100 feature-card">
+                    <div class="card-body">
+                        <h5 class="card-title">Automation Tools</h5>
+                        <p class="card-text">Connect to buying group APIs to make reservations and see deals, all in one place.</p>
+                    </div>
                 </div>
             </div>
         </div>
         <div class="col-md-4">
-            <div class="card h-100 feature-card">
-                <div class="card-body text-center">
-                    <i class="fas fa-chart-line fa-3x mb-3 feature-icon"></i>
-                    <h5 class="card-title">Product Sourcing
-                    </h5>
-                    <p class="card-text">Access thousands of high-quality products from reliable suppliers worldwide.</p>
+            <div class="feature-wrapper text-center">
+                <i class="fas fa-boxes fa-3x mb-3 text-primary"></i>
+                <div class="card h-100 feature-card">
+                    <div class="card-body">
+                        <h5 class="card-title">Inventory Management</h5>
+                        <p class="card-text">Stay up to date by seeing all your orders and accounts in one place.</p>
+                    </div>
                 </div>
             </div>
         </div>
@@ -65,7 +70,7 @@
             <div class="col-md-8 offset-md-2 text-center">
                 <h2>Ready to Start?</h2>
                 <p class="lead">Join thousands of successful entrepreneurs who have built their dropshipping empire with BuyingGroupPro.</p>
-                <a class="btn btn-primary btn-lg mt-3" href="{% url 'signup' %}" role="button">Create Your Account</a>
+                <a class="btn btn-primary btn-lg mt-3" href="{% url 'auth' %}" role="button">Create Your Account</a>
             </div>
         </div>
     </div>

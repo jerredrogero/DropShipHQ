@@ -48,8 +48,6 @@ class BuyingGroupForm(forms.ModelForm):
         fields = ['name']
 
 class RegisterForm(UserCreationForm):
-    usable_password = None
-
     class Meta:
         model = get_user_model()
         fields = ["username", "password1", "password2"]
