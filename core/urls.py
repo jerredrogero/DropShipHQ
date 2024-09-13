@@ -31,7 +31,7 @@ urlpatterns = [
     path('bfmr-deals/', bfmr_deals, name='bfmr_deals'),
     path('get-item-id/', get_item_id, name='get_item_id'),
     path('auth/', views.AuthView.as_view(), name='auth'),
-    path('logout/', auth_views.LogoutView.as_view(next_page='home'), name='logout'),
+    path('logout/', views.logout_view, name='logout'),
     path('terms-of-service/', views.TermsOfServiceView.as_view(), name='terms_of_service'),
     path('privacy-policy/', views.PrivacyPolicyView.as_view(), name='privacy_policy'),
 ]
