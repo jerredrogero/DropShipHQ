@@ -77,6 +77,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -86,14 +87,6 @@ MIDDLEWARE = [
     'core.middleware.PermissionsPolicyMiddleware',
 ]
 
-# Add WhiteNoise middleware for production
-if not DEBUG:
-    # Convert MIDDLEWARE to a list if it's a tuple
-    MIDDLEWARE = list(MIDDLEWARE)
-    # Add WhiteNoise middleware after SecurityMiddleware
-    MIDDLEWARE.insert(1, 'whitenoise.middleware.WhiteNoiseMiddleware')
-
-# Add this if it's not already there
 from django.contrib.messages import constants as messages
 MESSAGE_TAGS = {
     messages.ERROR: 'danger',
