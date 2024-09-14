@@ -109,19 +109,25 @@
         </div>
         <div class="tab-pane fade" id="crypto" role="tabpanel" aria-labelledby="crypto-tab">
             <div class="mt-3">
-                <h5>Bitcoin (BTC)</h5>
-                <p class="crypto-address">3BgJAaPqvUzjy7Pz9nog3UxYYwzjZLyGGb</p>
-                
-                <h5 class="mt-3">Ethereum (ETH)</h5>
-                <p class="crypto-address">0x8DdEE1343F2DDc9664f87f4023772E35A77B0ECf</p>
-                
-                <p class="mt-3">Please send only the specified cryptocurrency to its respective address.</p>
+                <div class="form-group">
+                    <label for="crypto-currency">Select Cryptocurrency</label>
+                    <select id="crypto-currency" class="form-control">
+                        <option value="">Choose a cryptocurrency</option>
+                        <option value="btc">Bitcoin (BTC)</option>
+                        <option value="eth">Ethereum (ETH)</option>
+                        <option value="ltc">Litecoin (LTC)</option>
+                        <option value="doge">Dogecoin (DOGE)</option>
+                    </select>
+                </div>
+                <div id="crypto-qr" class="text-center mt-3"></div>
+                <div id="crypto-address" class="text-center mt-2"></div>
             </div>
         </div>
     </div>
 </div>
 
 <script src="https://js.stripe.com/v3/"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script>
     const stripe = Stripe('{{ stripe_key }}');
     const elements = stripe.elements();
@@ -158,6 +164,42 @@
                 }
             }
         }
+    });
+
+    // Cryptocurrency donation
+    const cryptoAddresses = {
+        btc: '3BgJAaPqvUzjy7Pz9nog3UxYYwzjZLyGGb',
+        eth: '0x8DdEE1343F2DDc9664f87f4023772E35A77B0ECf',
+        ltc: 'MLZzvBc5Bn8WC62GaRRQBAngQjDdmqpyFQ',
+        doge: 'DKnD6vtU4B7uBWsvKDqQeNovfjkigKJLfw'
+    };
+
+    document.addEventListener('DOMContentLoaded', function() {
+        const cryptoSelect = document.getElementById('crypto-currency');
+        const qrContainer = document.getElementById('crypto-qr');
+        const addressContainer = document.getElementById('crypto-address');
+
+        cryptoSelect.addEventListener('change', function() {
+            const currency = this.value;
+            const address = cryptoAddresses[currency];
+            
+            if (address) {
+                // Generate QR code
+                qrContainer.innerHTML = ''; // Clear previous QR code
+                new QRCode(qrContainer, {
+                    text: address,
+                    width: 128,
+                    height: 128
+                });
+                
+                addressContainer.textContent = `${currency.toUpperCase()} Address: ${address}`;
+                qrContainer.style.display = 'block';
+            } else {
+                qrContainer.innerHTML = '';
+                addressContainer.textContent = '';
+                qrContainer.style.display = 'none';
+            }
+        });
     });
 </script>
 

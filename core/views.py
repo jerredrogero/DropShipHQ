@@ -412,13 +412,24 @@ def calculate_roc(purchase_price, reimbursement_price, cashback_percentage):
         "result": result
     }
 
-class CustomPasswordResetDoneView(auth_views.PasswordResetDoneView):
-    def get(self, request, *args, **kwargs):
-        messages.success(request, "We've emailed you instructions for setting your password. You should receive them shortly.")
-        return super().get(request, *args, **kwargs)
+class CustomPasswordResetView(auth_views.PasswordResetView):
+    template_name = 'core/password_reset.html'
+    email_template_name = 'core/password_reset_email.html'
+    success_url = reverse_lazy('password_reset_done')
 
-    def get_success_url(self):
-        return reverse_lazy('home')  # Replace 'home' with your home page URL name
+class CustomPasswordResetDoneView(auth_views.PasswordResetDoneView):
+    template_name = 'core/password_reset_done.html'
+
+class CustomPasswordResetConfirmView(auth_views.PasswordResetConfirmView):
+    template_name = 'core/password_reset_confirm.html'
+    success_url = reverse_lazy('password_reset_complete')
+
+class CustomPasswordResetCompleteView(auth_views.PasswordResetCompleteView):
+    template_name = 'core/password_reset_complete.html'
+
+    def get(self, request, *args, **kwargs):
+        messages.success(request, "Your password has been set. You may go ahead and log in now.")
+        return super().get(request, *args, **kwargs)
 
 @csrf_exempt
 def stripe_donation(request):
