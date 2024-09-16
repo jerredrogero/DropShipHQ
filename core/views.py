@@ -138,7 +138,7 @@ def dashboard(request):
         summary['total_reimbursed'] - summary['total_cost'] + summary['total_cash_back']
     )
 
-    subscription = Subscription.objects.get(user=request.user)
+    subscription, created = Subscription.objects.get_or_create(user=request.user, defaults={'plan': 'FREE', 'status': 'active'})
 
     # Handle form submission for adding new order
     if request.method == 'POST':
