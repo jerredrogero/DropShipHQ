@@ -19,7 +19,10 @@ class UserProfile(models.Model):
 def create_or_update_user_profile(sender, instance, created, **kwargs):
     if created:
         UserProfile.objects.create(user=instance)
-    instance.userprofile.save()
+    else:
+        # Use get_or_create to handle cases where UserProfile might not exist yet
+        profile, _ = UserProfile.objects.get_or_create(user=instance)
+        profile.save() 
 
 class BuyingGroup(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True)
