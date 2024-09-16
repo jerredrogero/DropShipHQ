@@ -2,7 +2,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_http_methods, require_POST
 from django.contrib import messages
-from django.conf import settings
+from django.conf import settings as django_settings
 from django.http import JsonResponse
 from django.contrib.auth import logout
 from django.contrib.auth.forms import UserCreationForm
@@ -23,7 +23,6 @@ from django.urls import reverse_lazy, reverse
 from django.views.generic.edit import FormView
 from .forms import UserCreationForm
 from django.contrib.auth import views as auth_views
-from django.conf import settings as django_settings
 import stripe
 import json
 import os
@@ -40,7 +39,7 @@ from django.views.generic import TemplateView
 from .decorators import check_subscription
 
 logger = logging.getLogger(__name__)
-stripe.api_key = settings.STRIPE_SECRET_KEY
+stripe.api_key = django_settings.STRIPE_SECRET_KEY
 
 
 def home(request):
@@ -468,9 +467,10 @@ class CustomPasswordResetCompleteView(auth_views.PasswordResetCompleteView):
 
 @csrf_exempt  # Stripe sends POST requests without CSRF tokens
 def stripe_webhook(request):
+    logger.info("Received Stripe webhook")
     payload = request.body
     sig_header = request.META.get('HTTP_STRIPE_SIGNATURE')
-    webhook_secret = settings.STRIPE_WEBHOOK_SECRET
+    webhook_secret = django_settings.STRIPE_WEBHOOK_SECRET
 
     try:
         event = stripe.Webhook.construct_event(
@@ -506,31 +506,59 @@ def stripe_webhook(request):
         return HttpResponse(status=400)
 
 def handle_checkout_session(session):
-    user_id = session['metadata']['user_id']
-    plan = session['metadata']['plan']
+    user_id = session['metadata'].get('user_id')
+    plan = session['metadata'].get('plan')
+
+    logger.info(f"Handling checkout session for user_id: {user_id}, plan: {plan}")
+
+    if not user_id or not plan:
+        logger.error("Missing user_id or plan in session metadata.")
+        return
+
     try:
         user = User.objects.get(id=user_id)
-        profile = UserProfile.objects.get(user=user)
         subscription, created = Subscription.objects.get_or_create(user=user)
-        subscription.plan = plan
+        
+        logger.info(f"Before update - User: {user.username}, Current plan: {subscription.plan}")
+
+        # Map the Stripe plan to the corresponding Subscription plan
+        plan_mapping = {
+            'STARTER_MONTHLY': 'STARTER',
+            'STARTER_YEARLY': 'STARTER',
+            'PRO_MONTHLY': 'PRO',
+            'PRO_YEARLY': 'PRO',
+            'PREMIUM_MONTHLY': 'PREMIUM',
+            'PREMIUM_YEARLY': 'PREMIUM',
+            'ENTERPRISE': 'ENTERPRISE'
+        }
+        
+        subscription_plan = plan_mapping.get(plan, 'FREE')
+        subscription.plan = subscription_plan
         subscription.stripe_subscription_id = session.get('subscription')
         subscription.status = 'active'
-        subscription.current_period_end = datetime.fromtimestamp(session.get('current_period_end'))
+        stripe_subscription = stripe.Subscription.retrieve(subscription.stripe_subscription_id)
+        subscription.end_date = timezone.make_aware(datetime.fromtimestamp(stripe_subscription.current_period_end))
         subscription.save()
-        logger.info(f"Subscription updated for user {user.username} to plan {plan}.")
+
+        logger.info(f"After update - User: {user.username}, New plan: {subscription.plan}")
+
+        # Verify the update
+        updated_subscription = Subscription.objects.get(user=user)
+        logger.info(f"Verification - User: {user.username}, Verified plan: {updated_subscription.plan}")
+
     except User.DoesNotExist:
         logger.error(f"User with ID {user_id} does not exist.")
-    except UserProfile.DoesNotExist:
-        logger.error(f"UserProfile for user ID {user_id} does not exist.")
+    except stripe.error.StripeError as e:
+        logger.error(f"Stripe error: {e}")
     except Exception as e:
-        logger.exception(f"Error in handle_checkout_session: {e}")
+        logger.exception(f"Error updating subscription: {e}")
 
 def handle_invoice_payment_succeeded(invoice):
     stripe_subscription_id = invoice['subscription']
     try:
         subscription = Subscription.objects.get(stripe_subscription_id=stripe_subscription_id)
         subscription.status = 'active'
-        subscription.current_period_end = datetime.fromtimestamp(invoice['current_period_end'])
+        subscription.end_date = timezone.make_aware(datetime.fromtimestamp(invoice['current_period_end']))
         subscription.save()
         logger.info(f"Invoice payment succeeded for subscription {stripe_subscription_id}.")
     except Subscription.DoesNotExist:
@@ -547,30 +575,9 @@ def handle_subscription_deleted(subscription_obj):
     except Subscription.DoesNotExist:
         logger.error(f"Subscription with ID {stripe_subscription_id} does not exist.")
 
-@csrf_exempt
-def stripe_donation(request):
-    if request.method == 'POST':
-        stripe_secret_key = django_settings.STRIPE_SECRET_KEY
-        if not stripe_secret_key:
-            return JsonResponse({'error': 'Stripe secret key is not set'}, status=500)
-        
-        stripe.api_key = stripe_secret_key
-        try:
-            data = json.loads(request.body)
-            amount = int(float(data['amount']) * 100)  # Convert to cents
-            intent = stripe.PaymentIntent.create(
-                amount=amount,
-                currency='usd',
-                payment_method_types=['card'],
-            )
-            return JsonResponse({'clientSecret': intent.client_secret})
-        except Exception as e:
-            return JsonResponse({'error': str(e)}, status=400)
-    return JsonResponse({'error': 'Invalid request method'}, status=400)
-
 def pricing(request):
     context = {
-        'STRIPE_PUBLISHABLE_KEY': settings.STRIPE_PUBLISHABLE_KEY,
+        'STRIPE_PUBLISHABLE_KEY': django_settings.STRIPE_PUBLISHABLE_KEY,
     }
     return render(request, 'core/pricing.html', context)
 
@@ -581,20 +588,29 @@ def upgrade_plan(request, plan):
         return JsonResponse({'error': 'Authentication required.'}, status=401)
     
     try:
-        price_id_map = {
-            'STARTER_MONTHLY': 'price_1PzO0qCBOzePXFXgKJPYibZ2',
-            'STARTER_YEARLY': 'price_1PzO0qCBOzePXFXgwSmjzykE',
-            'PRO_MONTHLY': 'price_1PzO4RCBOzePXFXgCIidB5SY',
-            'PRO_YEARLY': 'price_1PzO53CBOzePXFXgHSia7bMR',
-            'PREMIUM_MONTHLY': 'price_1PzO7ZCBOzePXFXgk7aY8TC7',
-            'PREMIUM_YEARLY': 'price_1PzO7ZCBOzePXFXgB2OUmrxI',
-            'ENTERPRISE': 'price_1Hh1XYZabcEnterprisePriceID', 
-        }
+        # Log the Stripe secret key (first 8 characters only for security)
+        logger.info(f"STRIPE_SECRET_KEY from settings: {django_settings.STRIPE_SECRET_KEY[:8]}...")
+        logger.info(f"STRIPE_SECRET_KEY from os.environ: {os.environ.get('STRIPE_SECRET_KEY')[:8]}...")
         
+        # Determine if we're in test or live mode
+        is_test_mode = django_settings.STRIPE_SECRET_KEY.startswith('sk_test_')
+        logger.info(f"Is test mode: {is_test_mode}")
+        
+        price_id_map = { 
+            'STARTER_MONTHLY': 'price_1PziYBCBOzePXFXg12Gae4C9' if is_test_mode else 'price_1PzO0qCBOzePXFXgKJPYibZ2',
+            'STARTER_YEARLY': 'price_1PziYVCBOzePXFXgF6lSxldU' if is_test_mode else 'price_1PzO0qCBOzePXFXgwSmjzykE',
+            'PRO_MONTHLY': 'price_1PziYhCBOzePXFXggTJr6tvD' if is_test_mode else 'price_1PzO4RCBOzePXFXgCIidB5SY',
+            'PRO_YEARLY': 'price_1PzO53CBOzePXFXgHSia7bMR' if is_test_mode else 'price_1PzO53CBOzePXFXgHSia7bMR',
+            'PREMIUM_MONTHLY': 'price_1PzO7ZCBOzePXFXgk7aY8TC7' if is_test_mode else 'price_1PzO7ZCBOzePXFXgk7aY8TC7',
+            'PREMIUM_YEARLY': 'price_1PzO7ZCBOzePXFXgB2OUmrxI' if is_test_mode else 'price_1PzO7ZCBOzePXFXgB2OUmrxI',
+            'ENTERPRISE': 'price_1Hh1XYZabcEnterprisePriceID' if is_test_mode else 'price_live_enterprise',
+        }
+
         if plan not in price_id_map:
             return JsonResponse({'error': 'Invalid plan selected.'}, status=400)
         
         price_id = price_id_map[plan]
+        logger.info(f"Selected price ID: {price_id}")
         
         user_profile, created = UserProfile.objects.get_or_create(user=request.user)
             
@@ -605,9 +621,12 @@ def upgrade_plan(request, plan):
             )
             user_profile.stripe_customer_id = customer.id
             user_profile.save()
+            logger.info(f"Created new Stripe customer: {customer.id}")
         else:
             customer = stripe.Customer.retrieve(user_profile.stripe_customer_id)
+            logger.info(f"Retrieved existing Stripe customer: {customer.id}")
         
+        logger.info(f"Creating checkout session with price_id: {price_id}")
         checkout_session = stripe.checkout.Session.create(
             customer=customer.id,
             payment_method_types=['card'],
@@ -623,6 +642,7 @@ def upgrade_plan(request, plan):
                 'plan': plan,
             },
         )
+        logger.info(f"Created checkout session: {checkout_session.id}")
         
         return JsonResponse({'sessionId': checkout_session.id})
     
@@ -633,28 +653,57 @@ def upgrade_plan(request, plan):
         logger.exception(f"Unexpected error in upgrade_plan: {e}")
         return JsonResponse({'error': 'An unexpected error occurred.'}, status=500)
 
+
 @login_required
 def upgrade_success(request):
     session_id = request.GET.get('session_id')
+    logger.info(f"Upgrade success called with session_id: {session_id}")
     
     if not session_id:
+        logger.error('No session ID provided.')
         messages.error(request, 'No session ID provided.')
         return redirect('dashboard')
     
     try:
         session = stripe.checkout.Session.retrieve(session_id)
+        logger.info(f"Retrieved session: {session.id}, mode: {session.mode}")
+        
         customer = stripe.Customer.retrieve(session.customer)
+        logger.info(f"Retrieved customer: {customer.id}")
         
         # Update user's Stripe customer ID if not already set
         user_profile, created = UserProfile.objects.get_or_create(user=request.user)
         if not user_profile.stripe_customer_id:
             user_profile.stripe_customer_id = customer.id
             user_profile.save()
+            logger.info(f"Updated user profile with Stripe customer ID: {customer.id}")
+        
+        # Update the user's subscription
+        subscription, created = Subscription.objects.get_or_create(user=request.user)
+        subscription.stripe_subscription_id = session.subscription
+        subscription.status = 'active'
+        
+        # Map the plan from the session metadata to your Subscription model's plan choices
+        plan_mapping = {
+            'STARTER_MONTHLY': 'STARTER',
+            'STARTER_YEARLY': 'STARTER',
+            'PRO_MONTHLY': 'PRO',
+            'PRO_YEARLY': 'PRO',
+            'PREMIUM_MONTHLY': 'PREMIUM',
+            'PREMIUM_YEARLY': 'PREMIUM',
+            'ENTERPRISE': 'ENTERPRISE'
+        }
+        session_plan = session.metadata.get('plan')
+        subscription.plan = plan_mapping.get(session_plan, 'FREE')
+        
+        subscription.save()
+        logger.info(f"Updated subscription: plan={subscription.plan}, status={subscription.status}")
         
         messages.success(request, 'Your subscription has been successfully upgraded!')
         return redirect('dashboard')
     
     except Exception as e:
+        logger.exception(f"An error occurred during upgrade_success: {str(e)}")
         messages.error(request, f'An error occurred: {str(e)}')
         return redirect('dashboard')
 

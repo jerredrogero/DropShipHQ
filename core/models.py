@@ -122,9 +122,10 @@ class Subscription(models.Model):
         ('ENTERPRISE', 'Enterprise'),
     ]
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='subscription')
-    plan = models.CharField(max_length=20, choices=[('FREE', 'Free'), ('PRO', 'Pro')], default='FREE')
+    plan = models.CharField(max_length=20, choices=PLAN_CHOICES, default='FREE')
     status = models.CharField(max_length=20, choices=[('active', 'Active'), ('inactive', 'Inactive')], default='active')
     order_count = models.IntegerField(default=0)
+    stripe_subscription_id = models.CharField(max_length=255, null=True, blank=True)
 
     def get_plan_display(self):
         return dict(self.PLAN_CHOICES)[self.plan]
@@ -140,9 +141,10 @@ class Subscription(models.Model):
         return limits[self.plan]
 
     def can_create_order(self):
-        if self.plan == 'FREE':
-            return self.order_count < 10
-        return True
+        limit = self.get_order_limit()
+        if limit == 'Unlimited':
+            return True
+        return self.order_count < limit
 
     def increment_order_count(self):
         self.order_count += 1

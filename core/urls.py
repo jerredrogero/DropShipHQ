@@ -1,7 +1,7 @@
 from django.urls import path, reverse_lazy
 from . import views
 from django.contrib.auth import views as auth_views
-from core.views import bfmr_deals, stripe_donation
+from core.views import bfmr_deals
 from django.utils.translation import gettext_lazy as _
 from .views import bfmr_deals
 from django.contrib import messages
@@ -48,7 +48,6 @@ urlpatterns = [
     path('password_reset/done/', views.CustomPasswordResetDoneView.as_view(), name='password_reset_done'),
     path('reset/<uidb64>/<token>/', views.CustomPasswordResetConfirmView.as_view(), name='password_reset_confirm'),
     path('reset/done/', views.CustomPasswordResetCompleteView.as_view(), name='password_reset_complete'),
-    path('stripe-donation/', stripe_donation, name='stripe_donation'),
     path('bfmr-deals/', bfmr_deals, name='bfmr_deals'),
     path('get-item-id/', get_item_id, name='get_item_id'),
     path('terms-of-service/', views.TermsOfServiceView.as_view(), name='terms_of_service'),
