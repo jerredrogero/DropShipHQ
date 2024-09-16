@@ -72,6 +72,15 @@
                                     {% endif %}
                                 </div>
                                 <div class="form-group">
+                                    <label for="signup-email">Email</label>
+                                    <input type="email" name="email" class="form-control {% if signup_form.email.errors %}is-invalid{% endif %}" id="signup-email" required>
+                                    {% if signup_form.email.errors %}
+                                        <div class="invalid-feedback">
+                                            {{ signup_form.email.errors.0 }}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                                <div class="form-group">
                                     <label for="signup-password1">Password</label>
                                     <input type="password" name="password1" class="form-control {% if signup_form.password1.errors %}is-invalid{% endif %}" id="signup-password1" required>
                                     {% if signup_form.password1.errors %}
@@ -90,7 +99,7 @@
                                     {% endif %}
                                 </div>
                                 <br>
-                                <button type="submit" class="btn btn-primary btn-block">Sign Up</button>
+                                <button type="submit" class="btn btn-success btn-block">Sign Up</button>
                             </form>
                         </div>
                     </div>

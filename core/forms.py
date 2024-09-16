@@ -3,6 +3,8 @@ from .models import Order, APICredentials, BuyingGroup, Account, Merchant, Card,
 from django.contrib.auth.forms import UserCreationForm
 from django.utils.translation import gettext_lazy as _
 from django.contrib.auth import get_user_model
+from django.contrib.auth.models import User
+
 
 
 class OrderForm(forms.ModelForm):
@@ -47,10 +49,28 @@ class BuyingGroupForm(forms.ModelForm):
         model = BuyingGroup
         fields = ['name']
 
-class RegisterForm(UserCreationForm):
+class CustomUserCreationForm(UserCreationForm):
+    email = forms.EmailField(
+        required=True,
+        help_text='Required. Enter a valid email address.'
+    )
+
     class Meta:
-        model = get_user_model()
-        fields = ["username", "password1", "password2"]
+        model = User
+        fields = ("username", "email", "password1", "password2")
+
+    def clean_email(self):
+        email = self.cleaned_data.get('email')
+        if User.objects.filter(email=email).exists():
+            raise forms.ValidationError("A user with that email already exists.")
+        return email
+
+    def save(self, commit=True):
+        user = super().save(commit=False)
+        user.email = self.cleaned_data['email']
+        if commit:
+            user.save()
+        return user
 
 class AccountForm(forms.ModelForm):
     class Meta:

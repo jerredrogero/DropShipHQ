@@ -10,7 +10,7 @@ from django.db.models import Sum, F, DecimalField, Q
 from django.db.models.functions import Coalesce
 from django.contrib.auth.models import User
 from .models import Order, APICredentials, BuyingGroup, Account, Merchant, Card, Subscription, UserProfile
-from .forms import OrderForm, APICredentialsForm, DealCalculatorForm, BuyingGroupForm, AccountForm, MerchantForm, CardForm
+from .forms import OrderForm, APICredentialsForm, DealCalculatorForm, CustomUserCreationForm, BuyingGroupForm, AccountForm, MerchantForm, CardForm
 from datetime import datetime
 from django.utils import timezone
 import requests
@@ -50,12 +50,10 @@ def home(request):
     return render(request, 'core/home.html', {'stripe_key': stripe_key})
 
 class AuthView(View):
-    template_name = 'registration/auth.html'
-
     def get(self, request):
         login_form = AuthenticationForm()
-        signup_form = UserCreationForm()
-        return render(request, self.template_name, {
+        signup_form = CustomUserCreationForm()
+        return render(request, 'registration/auth.html', {
             'login_form': login_form,
             'signup_form': signup_form
         })
@@ -63,31 +61,46 @@ class AuthView(View):
     def post(self, request):
         action = request.POST.get('action')
         if action == 'login':
-            login_form = AuthenticationForm(data=request.POST)
-            signup_form = UserCreationForm()
-            if login_form.is_valid():
-                username = login_form.cleaned_data.get('username')
-                password = login_form.cleaned_data.get('password')
-                user = authenticate(username=username, password=password)
-                if user is not None:
-                    login(request, user)
-                    messages.success(request, f"Welcome back, {username}!")
-                    return redirect('dashboard')
-            else:
-                login_form.add_error(None, "Invalid username or password.")
+            return self.handle_login(request)
         elif action == 'signup':
-            signup_form = UserCreationForm(data=request.POST)
-            login_form = AuthenticationForm()
-            if signup_form.is_valid():
-                user = signup_form.save()
-                login(request, user)
-                messages.success(request, f"Account created successfully. Welcome, {user.username}!")
-                return redirect('dashboard')
+            return self.handle_signup(request)
         else:
-            login_form = AuthenticationForm()
-            signup_form = UserCreationForm()
+            messages.error(request, "Invalid action.")
+            return redirect('auth')
 
-        return render(request, self.template_name, {
+    def handle_login(self, request):
+        form = AuthenticationForm(request, data=request.POST)
+        if form.is_valid():
+            username = form.cleaned_data.get('username')
+            password = form.cleaned_data.get('password')
+            user = authenticate(username=username, password=password)
+            if user is not None:
+                login(request, user)
+                messages.success(request, f"Welcome back, {username}!")
+                return redirect('dashboard')
+            else:
+                messages.error(request, "Invalid username or password.")
+        else:
+            messages.error(request, "Invalid username or password.")
+        login_form = form
+        signup_form = CustomUserCreationForm()
+        return render(request, 'registration/auth.html', {
+            'login_form': login_form,
+            'signup_form': signup_form
+        })
+
+    def handle_signup(self, request):
+        form = CustomUserCreationForm(request.POST)
+        if form.is_valid():
+            user = form.save()
+            login(request, user)
+            messages.success(request, "Registration successful. You are now logged in.")
+            return redirect('dashboard')
+        else:
+            messages.error(request, "Please correct the errors below.")
+        login_form = AuthenticationForm()
+        signup_form = form
+        return render(request, 'registration/auth.html', {
             'login_form': login_form,
             'signup_form': signup_form
         })
