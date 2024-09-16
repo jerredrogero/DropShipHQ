@@ -89,9 +89,13 @@ def update_subscription_order_count_on_save(sender, instance, created, **kwargs)
 
 @receiver(post_delete, sender=Order)
 def update_subscription_order_count_on_delete(sender, instance, **kwargs):
-    subscription = instance.user.subscription
-    subscription.order_count = max(0, subscription.order_count - 1)
-    subscription.save()
+    try:
+        subscription = instance.user.subscription
+        subscription.order_count = max(0, subscription.order_count - 1)
+        subscription.save()
+    except Subscription.DoesNotExist:
+        # If the subscription doesn't exist, we don't need to update anything
+        pass
 
 class APICredentials(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
@@ -118,11 +122,9 @@ class Subscription(models.Model):
         ('ENTERPRISE', 'Enterprise'),
     ]
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='subscription')
-    plan = models.CharField(max_length=10, choices=PLAN_CHOICES, default='FREE')
+    plan = models.CharField(max_length=20, choices=[('FREE', 'Free'), ('PRO', 'Pro')], default='FREE')
+    status = models.CharField(max_length=20, choices=[('active', 'Active'), ('inactive', 'Inactive')], default='active')
     order_count = models.IntegerField(default=0)
-    start_date = models.DateTimeField(default=timezone.now)
-    end_date = models.DateTimeField(null=True, blank=True)
-    status = models.CharField(max_length=20, default='active')
 
     def get_plan_display(self):
         return dict(self.PLAN_CHOICES)[self.plan]
@@ -139,13 +141,8 @@ class Subscription(models.Model):
 
     def can_create_order(self):
         if self.plan == 'FREE':
-            return self.order_count < 5
-        elif self.plan == 'STARTER':
-            return self.order_count < 30
-        elif self.plan == 'PRO':
-            return self.order_count < 100
-        else:  # PREMIUM and ENTERPRISE
-            return True
+            return self.order_count < 10
+        return True
 
     def increment_order_count(self):
         self.order_count += 1

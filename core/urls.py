@@ -18,6 +18,26 @@ class CustomPasswordResetView(auth_views.PasswordResetView):
 urlpatterns = [
     path('', views.home, name='home'),
     path('dashboard/', views.dashboard, name='dashboard'),
+    path('auth/', views.AuthView.as_view(), name='auth'),
+    path('logout/', views.logout_view, name='logout'),
+    path('pricing/', views.pricing, name='pricing'),
+    path('upgrade/<str:plan>/', views.upgrade_plan, name='upgrade_plan'),
+    path('upgrade_success/', views.upgrade_success, name='upgrade_success'),
+    path('password_reset/', auth_views.PasswordResetView.as_view(
+        template_name='registration/password_reset_form.html',
+        email_template_name='registration/password_reset_email.html',
+        subject_template_name='registration/password_reset_subject.txt'
+    ), name='password_reset'),
+    path('password_reset/done/', auth_views.PasswordResetDoneView.as_view(
+        template_name='registration/password_reset_done.html'
+    ), name='password_reset_done'),
+    path('reset/<uidb64>/<token>/', auth_views.PasswordResetConfirmView.as_view(
+        template_name='registration/password_reset_confirm.html'
+    ), name='password_reset_confirm'),
+    path('reset/done/', auth_views.PasswordResetCompleteView.as_view(
+        template_name='registration/password_reset_complete.html'
+    ), name='password_reset_complete'),
+    path('', views.home, name='home'),
     path('delete-order/<int:order_id>/', views.delete_order, name='delete_order'),
     path('settings/', views.account_settings, name='settings'),
     path('bfmr-deals/', bfmr_deals, name='bfmr_deals'),
@@ -31,12 +51,7 @@ urlpatterns = [
     path('stripe-donation/', stripe_donation, name='stripe_donation'),
     path('bfmr-deals/', bfmr_deals, name='bfmr_deals'),
     path('get-item-id/', get_item_id, name='get_item_id'),
-    path('auth/', views.AuthView.as_view(), name='auth'),
-    path('logout/', views.logout_view, name='logout'),
     path('terms-of-service/', views.TermsOfServiceView.as_view(), name='terms_of_service'),
     path('privacy-policy/', views.PrivacyPolicyView.as_view(), name='privacy_policy'),
-    path('pricing/', views.pricing, name='pricing'),
-    path('upgrade/<str:plan>/', views.upgrade_plan, name='upgrade_plan'),
     path('webhook/', views.stripe_webhook, name='stripe_webhook'),
-    path('upgrade_success/', views.upgrade_success, name='upgrade_success'),
 ]

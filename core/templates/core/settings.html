@@ -157,12 +157,95 @@
                         <li class="list-group-item"><a href="https://bigskybuyers.com" target="_blank">Big Sky Buying Group</a></li>
                         <li class="list-group-item"><a href="https://portal.dealandrunner.com/?a=UA5Z2" target="_blank">Deal & Runner</a></li>
                         <li class="list-group-item"><a href="https://buyinggroup.com/signup?id=e26acdbb" target="_blank">Buying Group</a></li>
-                        <li class="list-group-item"><a href="https://www.closeoutnj.com/p/newaccount/_referral/eyJjdCI6InNyVm81MTR2dFQ5M3dUQVBzZEVoakE9PSIsIml2IjoiZGIyYWRlZDcwZjIyZThhMGVjOGFjOTFkMjdhNmZhMWMiLCJzIjoiOWNhM2VkZWJlMzAxYmJhMiJ9" target="_blank">CloseoutNJ</a></li>
+                        <li class="list-group-item"><a href="https://www.closeoutnj.com/p/newaccount/_referral/eyJjdCI6InNyVm81MTR2dFQ5MzdUQVBzZEVoakE9PSIsIml2IjoiZGIyYWRlZDcwZjIyZThhMGVjOGFjOTFkMjdhNmZhMWMiLCJzIjoiOWNhM2VkZWJlMzAxYmJhMiJ9" target="_blank">CloseoutNJ</a></li>
                         <li class="list-group-item"><a href="https://www.maxoutdeals.com/p/newaccount/_referral/eyJjdCI6InRlc3l6TCtxRmVZemlZV1J2WVhuNGc9PSIsIml2IjoiNjVjMDY4YWU1MmVkNTcxMDMwZTNjMmEyMmQ5MzM0ZGEiLCJzIjoiNTk2Zjc3ODg1ODk5NjdlZCJ9" target="_blank">Maxout Deals</a></li>
                     </ul>
                 </div>
             </div>
         </div>
     </div>
+
+    <!-- Delete Account Section -->
+    <div class="mt-5">
+        <h4>Delete Your Account</h4>
+        <p class="text-danger">Permanently delete your account. This action cannot be undone.</p>
+        <!-- Button trigger modal -->
+        <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteAccountModal">
+            Delete Account
+        </button>
+
+        <!-- Modal -->
+        <div class="modal fade" id="deleteAccountModal" tabindex="-1" aria-labelledby="deleteAccountModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <form method="post" action="{% url 'settings' %}">
+                        {% csrf_token %}
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="deleteAccountModalLabel">Confirm Account Deletion</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            Are you sure you want to delete your account? This action cannot be undone.
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                            <button type="submit" name="delete_account" class="btn btn-danger">Delete Account</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
+{% endblock %}
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        var triggerTabList = [].slice.call(document.querySelectorAll('#authTabs button'))
+        var loginFooter = document.getElementById('login-footer');
+        var signupFooter = document.getElementById('signup-footer');
+
+        triggerTabList.forEach(function (triggerEl) {
+            var tabTrigger = new bootstrap.Tab(triggerEl)
+            
+            triggerEl.addEventListener('click', function (event) {
+                event.preventDefault()
+                tabTrigger.show()
+            })
+
+            triggerEl.addEventListener('shown.bs.tab', function (event) {
+                event.target.classList.remove('text-white');
+                triggerTabList.forEach(function(tab) {
+                    if (tab !== event.target) {
+                        tab.classList.add('text-white');
+                    }
+                });
+
+                // Toggle footer content
+                if (event.target.id === 'login-tab') {
+                    loginFooter.classList.remove('d-none');
+                    signupFooter.classList.add('d-none');
+                } else if (event.target.id === 'signup-tab') {
+                    loginFooter.classList.add('d-none');
+                    signupFooter.classList.remove('d-none');
+                }
+            })
+        })
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const tab = urlParams.get('tab');
+        if (tab === 'signup') {
+            document.getElementById('signup-tab').click();
+        } else {
+            document.getElementById('login-tab').classList.remove('text-white');
+        }
+
+        // If there are error messages, make sure the appropriate tab is active
+        if (document.querySelector('#login .alert-danger')) {
+            document.getElementById('login-tab').click();
+        } else if (document.querySelector('#signup .alert-danger')) {
+            document.getElementById('signup-tab').click();
+        }
+    });
+</script>
 {% endblock %}

@@ -253,13 +253,21 @@ def account_settings(request):
             form = BuyingGroupForm(request.POST)
         elif 'update_api_credentials' in request.POST:
             form = APICredentialsForm(request.POST, instance=api_credentials)
+        elif 'delete_account' in request.POST:
+            # Handle account deletion
+            user = request.user
+            logout(request)
+            user.delete()
+            messages.success(request, "Your account has been deleted successfully.")
+            return redirect(reverse('home'))  # Redirect to home page
         
-        if form.is_valid():
-            instance = form.save(commit=False)
-            instance.user = request.user
-            instance.save()
-            messages.success(request, f"{form.instance._meta.verbose_name} added/updated successfully.")
-            return redirect('settings')
+        if 'delete_account' not in request.POST:
+            if form.is_valid():
+                instance = form.save(commit=False)
+                instance.user = request.user
+                instance.save()
+                messages.success(request, f"{form.instance._meta.verbose_name} added/updated successfully.")
+                return redirect('settings')
     else:
         account_form = AccountForm()
         merchant_form = MerchantForm()
@@ -272,11 +280,11 @@ def account_settings(request):
         'merchants': merchants,
         'cards': cards,
         'buying_groups': buying_groups,
-        'account_form': account_form,
-        'merchant_form': merchant_form,
-        'card_form': card_form,
-        'buying_group_form': buying_group_form,
-        'api_credentials_form': api_credentials_form,
+        'account_form': account_form if not request.method == 'POST' else None,
+        'merchant_form': merchant_form if not request.method == 'POST' else None,
+        'card_form': card_form if not request.method == 'POST' else None,
+        'buying_group_form': buying_group_form if not request.method == 'POST' else None,
+        'api_credentials_form': api_credentials_form if not request.method == 'POST' else None,
     }
     return render(request, 'core/settings.html', context)
 
@@ -440,19 +448,19 @@ def calculate_roc(purchase_price, reimbursement_price, cashback_percentage):
     }
 
 class CustomPasswordResetView(auth_views.PasswordResetView):
-    template_name = 'core/password_reset.html'
-    email_template_name = 'core/password_reset_email.html'
+    template_name = 'registration/password_reset_form.html'
+    email_template_name = 'registration/password_reset_email.html'
     success_url = reverse_lazy('password_reset_done')
 
 class CustomPasswordResetDoneView(auth_views.PasswordResetDoneView):
-    template_name = 'core/password_reset_done.html'
+    template_name = 'registration/password_reset_done.html'
 
 class CustomPasswordResetConfirmView(auth_views.PasswordResetConfirmView):
-    template_name = 'core/password_reset_confirm.html'
+    template_name = 'registration/password_reset_confirm.html'
     success_url = reverse_lazy('password_reset_complete')
 
 class CustomPasswordResetCompleteView(auth_views.PasswordResetCompleteView):
-    template_name = 'core/password_reset_complete.html'
+    template_name = 'registration/password_reset_complete.html'
 
     def get(self, request, *args, **kwargs):
         messages.success(request, "Your password has been set. You may go ahead and log in now.")
