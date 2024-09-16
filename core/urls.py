@@ -19,7 +19,7 @@ urlpatterns = [
     path('', views.home, name='home'),
     path('dashboard/', views.dashboard, name='dashboard'),
     path('delete-order/<int:order_id>/', views.delete_order, name='delete_order'),
-    path('settings/', views.settings, name='settings'),
+    path('settings/', views.account_settings, name='settings'),
     path('bfmr-deals/', bfmr_deals, name='bfmr_deals'),
     path('edit-order/<int:order_id>/', views.edit_order, name='edit_order'),
     path('deal-calculator/', views.deal_calculator, name='deal_calculator'),
@@ -35,4 +35,8 @@ urlpatterns = [
     path('logout/', views.logout_view, name='logout'),
     path('terms-of-service/', views.TermsOfServiceView.as_view(), name='terms_of_service'),
     path('privacy-policy/', views.PrivacyPolicyView.as_view(), name='privacy_policy'),
+    path('pricing/', views.pricing, name='pricing'),
+    path('upgrade/<str:plan>/', views.upgrade_plan, name='upgrade_plan'),
+    path('webhook/', views.stripe_webhook, name='stripe_webhook'),
+    path('upgrade_success/', views.upgrade_success, name='upgrade_success'),
 ]

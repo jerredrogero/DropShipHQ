@@ -2,12 +2,14 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_http_methods, require_POST
 from django.contrib import messages
+from django.conf import settings
 from django.http import JsonResponse
 from django.contrib.auth import logout
 from django.contrib.auth.forms import UserCreationForm
 from django.db.models import Sum, F, DecimalField, Q
 from django.db.models.functions import Coalesce
-from .models import Order, APICredentials, BuyingGroup, Account, Merchant, Card
+from django.contrib.auth.models import User
+from .models import Order, APICredentials, BuyingGroup, Account, Merchant, Card, Subscription, UserProfile
 from .forms import OrderForm, APICredentialsForm, DealCalculatorForm, BuyingGroupForm, AccountForm, MerchantForm, CardForm
 from datetime import datetime
 from django.utils import timezone
@@ -17,7 +19,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.utils.dateparse import parse_date
 import calendar
 from decimal import Decimal
-from django.urls import reverse_lazy
+from django.urls import reverse_lazy, reverse
 from django.views.generic.edit import FormView
 from .forms import UserCreationForm
 from django.contrib.auth import views as auth_views
@@ -35,8 +37,11 @@ from django.contrib.auth import login, authenticate
 from django.views import View
 from django.contrib import messages
 from django.views.generic import TemplateView
+from .decorators import check_subscription
 
 logger = logging.getLogger(__name__)
+stripe.api_key = settings.STRIPE_SECRET_KEY
+
 
 def home(request):
     stripe_key = django_settings.STRIPE_PUBLISHABLE_KEY
@@ -133,17 +138,25 @@ def dashboard(request):
         summary['total_reimbursed'] - summary['total_cost'] + summary['total_cash_back']
     )
 
+    subscription = Subscription.objects.get(user=request.user)
+
     # Handle form submission for adding new order
     if request.method == 'POST':
         form = OrderForm(request.POST, user=request.user)
         if form.is_valid():
-            order = form.save(commit=False)
-            order.user = request.user
-            order.save()
-            messages.success(request, 'Order added successfully.')
-            return redirect('dashboard')
+            if subscription.can_create_order():
+                order = form.save(commit=False)
+                order.user = request.user
+                order.save()
+                messages.success(request, 'Order added successfully.')
+                return redirect('dashboard')
+            else:
+                messages.warning(request, f"You've reached the limit of orders for your {subscription.get_plan_display()} plan. Please upgrade your plan.")
+                return redirect('pricing')
     else:
         form = OrderForm(user=request.user)
+        if not subscription.can_create_order():
+            form = None  # Disable the form if the limit is reached
 
     # Fetch other necessary data
     buying_groups = BuyingGroup.objects.filter(user=request.user)
@@ -162,6 +175,7 @@ def dashboard(request):
         'start_date': start_date,
         'end_date': end_date,
         'search_query': search_query,
+        'subscription': subscription,
     }
 
     return render(request, 'core/dashboard.html', context)
@@ -204,7 +218,7 @@ class CustomSignupView(FormView):
         return super().form_valid(form)
 
 @login_required
-def settings(request):
+def account_settings(request):
     accounts = Account.objects.filter(user=request.user)
     merchants = Merchant.objects.filter(user=request.user)
     cards = Card.objects.filter(user=request.user)
@@ -431,6 +445,87 @@ class CustomPasswordResetCompleteView(auth_views.PasswordResetCompleteView):
         messages.success(request, "Your password has been set. You may go ahead and log in now.")
         return super().get(request, *args, **kwargs)
 
+@csrf_exempt  # Stripe sends POST requests without CSRF tokens
+def stripe_webhook(request):
+    payload = request.body
+    sig_header = request.META.get('HTTP_STRIPE_SIGNATURE')
+    webhook_secret = settings.STRIPE_WEBHOOK_SECRET
+
+    try:
+        event = stripe.Webhook.construct_event(
+            payload, sig_header, webhook_secret
+        )
+        logger.info(f"Received event: {event['type']}")
+
+        # Handle the event
+        if event['type'] == 'checkout.session.completed':
+            session = event['data']['object']
+            handle_checkout_session(session)
+        elif event['type'] == 'invoice.payment_succeeded':
+            invoice = event['data']['object']
+            handle_invoice_payment_succeeded(invoice)
+        elif event['type'] == 'customer.subscription.deleted':
+            subscription_obj = event['data']['object']
+            handle_subscription_deleted(subscription_obj)
+        # Handle other event types as needed
+
+        return HttpResponse(status=200)
+
+    except ValueError as e:
+        # Invalid payload
+        logger.error(f"Invalid payload: {e}")
+        return HttpResponse(status=400)
+    except stripe.error.SignatureVerificationError as e:
+        # Invalid signature
+        logger.error(f"Invalid signature: {e}")
+        return HttpResponse(status=400)
+    except Exception as e:
+        # Other errors
+        logger.error(f"Webhook error: {e}")
+        return HttpResponse(status=400)
+
+def handle_checkout_session(session):
+    user_id = session['metadata']['user_id']
+    plan = session['metadata']['plan']
+    try:
+        user = User.objects.get(id=user_id)
+        profile = UserProfile.objects.get(user=user)
+        subscription, created = Subscription.objects.get_or_create(user=user)
+        subscription.plan = plan
+        subscription.stripe_subscription_id = session.get('subscription')
+        subscription.status = 'active'
+        subscription.current_period_end = datetime.fromtimestamp(session.get('current_period_end'))
+        subscription.save()
+        logger.info(f"Subscription updated for user {user.username} to plan {plan}.")
+    except User.DoesNotExist:
+        logger.error(f"User with ID {user_id} does not exist.")
+    except UserProfile.DoesNotExist:
+        logger.error(f"UserProfile for user ID {user_id} does not exist.")
+    except Exception as e:
+        logger.exception(f"Error in handle_checkout_session: {e}")
+
+def handle_invoice_payment_succeeded(invoice):
+    stripe_subscription_id = invoice['subscription']
+    try:
+        subscription = Subscription.objects.get(stripe_subscription_id=stripe_subscription_id)
+        subscription.status = 'active'
+        subscription.current_period_end = datetime.fromtimestamp(invoice['current_period_end'])
+        subscription.save()
+        logger.info(f"Invoice payment succeeded for subscription {stripe_subscription_id}.")
+    except Subscription.DoesNotExist:
+        logger.error(f"Subscription with ID {stripe_subscription_id} does not exist.")
+
+def handle_subscription_deleted(subscription_obj):
+    stripe_subscription_id = subscription_obj['id']
+    try:
+        subscription = Subscription.objects.get(stripe_subscription_id=stripe_subscription_id)
+        subscription.plan = 'FREE'  # Revert to a free plan or handle accordingly
+        subscription.status = 'canceled'
+        subscription.save()
+        logger.info(f"Subscription {stripe_subscription_id} canceled.")
+    except Subscription.DoesNotExist:
+        logger.error(f"Subscription with ID {stripe_subscription_id} does not exist.")
+
 @csrf_exempt
 def stripe_donation(request):
     if request.method == 'POST':
@@ -451,6 +546,96 @@ def stripe_donation(request):
         except Exception as e:
             return JsonResponse({'error': str(e)}, status=400)
     return JsonResponse({'error': 'Invalid request method'}, status=400)
+
+def pricing(request):
+    context = {
+        'STRIPE_PUBLISHABLE_KEY': settings.STRIPE_PUBLISHABLE_KEY,
+    }
+    return render(request, 'core/pricing.html', context)
+
+@require_POST
+def upgrade_plan(request, plan):
+    logger.info(f"Upgrade plan request received for plan: {plan}")
+    if not request.user.is_authenticated:
+        return JsonResponse({'error': 'Authentication required.'}, status=401)
+    
+    try:
+        price_id_map = {
+            'STARTER_MONTHLY': 'price_1PzO0qCBOzePXFXgKJPYibZ2',
+            'STARTER_YEARLY': 'price_1PzO0qCBOzePXFXgwSmjzykE',
+            'PRO_MONTHLY': 'price_1PzO4RCBOzePXFXgCIidB5SY',
+            'PRO_YEARLY': 'price_1PzO53CBOzePXFXgHSia7bMR',
+            'PREMIUM_MONTHLY': 'price_1PzO7ZCBOzePXFXgk7aY8TC7',
+            'PREMIUM_YEARLY': 'price_1PzO7ZCBOzePXFXgB2OUmrxI',
+            'ENTERPRISE': 'price_1Hh1XYZabcEnterprisePriceID', 
+        }
+        
+        if plan not in price_id_map:
+            return JsonResponse({'error': 'Invalid plan selected.'}, status=400)
+        
+        price_id = price_id_map[plan]
+        
+        user_profile, created = UserProfile.objects.get_or_create(user=request.user)
+            
+        if not user_profile.stripe_customer_id:
+            customer = stripe.Customer.create(
+                email=request.user.email,
+                name=request.user.username,
+            )
+            user_profile.stripe_customer_id = customer.id
+            user_profile.save()
+        else:
+            customer = stripe.Customer.retrieve(user_profile.stripe_customer_id)
+        
+        checkout_session = stripe.checkout.Session.create(
+            customer=customer.id,
+            payment_method_types=['card'],
+            line_items=[{
+                'price': price_id,
+                'quantity': 1,
+            }],
+            mode='subscription',
+            success_url=request.build_absolute_uri(reverse('upgrade_success')) + "?session_id={CHECKOUT_SESSION_ID}",
+            cancel_url=request.build_absolute_uri(reverse('pricing')),
+            metadata={
+                'user_id': request.user.id,
+                'plan': plan,
+            },
+        )
+        
+        return JsonResponse({'sessionId': checkout_session.id})
+    
+    except stripe.error.StripeError as e:
+        logger.error(f"Stripe error: {str(e)}")
+        return JsonResponse({'error': str(e)}, status=400)
+    except Exception as e:
+        logger.exception(f"Unexpected error in upgrade_plan: {e}")
+        return JsonResponse({'error': 'An unexpected error occurred.'}, status=500)
+
+@login_required
+def upgrade_success(request):
+    session_id = request.GET.get('session_id')
+    
+    if not session_id:
+        messages.error(request, 'No session ID provided.')
+        return redirect('dashboard')
+    
+    try:
+        session = stripe.checkout.Session.retrieve(session_id)
+        customer = stripe.Customer.retrieve(session.customer)
+        
+        # Update user's Stripe customer ID if not already set
+        user_profile, created = UserProfile.objects.get_or_create(user=request.user)
+        if not user_profile.stripe_customer_id:
+            user_profile.stripe_customer_id = customer.id
+            user_profile.save()
+        
+        messages.success(request, 'Your subscription has been successfully upgraded!')
+        return redirect('dashboard')
+    
+    except Exception as e:
+        messages.error(request, f'An error occurred: {str(e)}')
+        return redirect('dashboard')
 
 @login_required
 def get_item_id(request):

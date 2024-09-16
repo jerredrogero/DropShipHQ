@@ -91,7 +91,7 @@ footer {
 .card-body p {
     font-size: 1.25rem;
     font-weight: bold;
-    color: #28a745; 
+    color: #007bff; /* Changed from #28a745 (green) to #007bff (blue) */
 }
 
 /* Feature Card Layout */
@@ -112,6 +112,12 @@ footer {
 
 #features {
     padding-bottom: 3rem;
+}
+#features .card-body p,
+#features .feature-card .card-body p {
+    font-size: 1.25rem;
+    font-weight: bold;
+    color: #007bff !important; /* Blue color with !important to ensure it's applied */
 }
 
 /* Auth Tabs */
