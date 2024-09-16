@@ -88,8 +88,6 @@
                 {% else %}
                     {{ subscription.get_order_limit }}
                 {% endif %}
-                <br>
-                Last updated: {% now "Y-m-d H:i:s" %}
             </div>
             {% if form %}
                 <form method="post" class="row g-2">

@@ -132,7 +132,7 @@ class Subscription(models.Model):
             'FREE': 5,
             'STARTER': 30,
             'PRO': 100,
-            'PREMIUM': 'Unlimited',
+            'PREMIUM': 500,
             'ENTERPRISE': 'Unlimited'
         }
         return limits[self.plan]
