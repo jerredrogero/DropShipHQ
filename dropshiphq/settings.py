@@ -179,14 +179,12 @@ LOGIN_REDIRECT_URL = 'dashboard'  # or wherever you want users to go after loggi
 LOGOUT_REDIRECT_URL = 'home'  # or wherever you want users to go after logging out
 
 # Use environment variables for email configuration
-EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', 'your-email@example.com')
-EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', 'your-email-password')
-
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.mail.me.com'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
-
+EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER')
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD')
 DEFAULT_FROM_EMAIL = 'noreply@buyinggrouppro.com'
 
 STRIPE_PUBLISHABLE_KEY = os.environ.get('STRIPE_PUBLISHABLE_KEY')
