@@ -588,10 +588,6 @@ def upgrade_plan(request, plan):
         return JsonResponse({'error': 'Authentication required.'}, status=401)
     
     try:
-        # Log the Stripe secret key (first 8 characters only for security)
-        logger.info(f"STRIPE_SECRET_KEY from settings: {django_settings.STRIPE_SECRET_KEY[:8]}...")
-        logger.info(f"STRIPE_SECRET_KEY from os.environ: {os.environ.get('STRIPE_SECRET_KEY')[:8]}...")
-        
         # Determine if we're in test or live mode
         is_test_mode = django_settings.STRIPE_SECRET_KEY.startswith('sk_test_')
         logger.info(f"Is test mode: {is_test_mode}")
@@ -600,9 +596,9 @@ def upgrade_plan(request, plan):
             'STARTER_MONTHLY': 'price_1PziYBCBOzePXFXg12Gae4C9' if is_test_mode else 'price_1PzO0qCBOzePXFXgKJPYibZ2',
             'STARTER_YEARLY': 'price_1PziYVCBOzePXFXgF6lSxldU' if is_test_mode else 'price_1PzO0qCBOzePXFXgwSmjzykE',
             'PRO_MONTHLY': 'price_1PziYhCBOzePXFXggTJr6tvD' if is_test_mode else 'price_1PzO4RCBOzePXFXgCIidB5SY',
-            'PRO_YEARLY': 'price_1PzO53CBOzePXFXgHSia7bMR' if is_test_mode else 'price_1PzO53CBOzePXFXgHSia7bMR',
-            'PREMIUM_MONTHLY': 'price_1PzO7ZCBOzePXFXgk7aY8TC7' if is_test_mode else 'price_1PzO7ZCBOzePXFXgk7aY8TC7',
-            'PREMIUM_YEARLY': 'price_1PzO7ZCBOzePXFXgB2OUmrxI' if is_test_mode else 'price_1PzO7ZCBOzePXFXgB2OUmrxI',
+            'PRO_YEARLY': 'price_1PziYhCBOzePXFXggTJr6tvD' if is_test_mode else 'price_1PzO53CBOzePXFXgHSia7bMR',
+            'PREMIUM_MONTHLY': 'price_1PziYtCBOzePXFXgbKXzXbJk' if is_test_mode else 'price_1PzO7ZCBOzePXFXgk7aY8TC7',
+            'PREMIUM_YEARLY': 'price_1PziYtCBOzePXFXgbKXzXbJk' if is_test_mode else 'price_1PzO7ZCBOzePXFXgB2OUmrxI',
             'ENTERPRISE': 'price_1Hh1XYZabcEnterprisePriceID' if is_test_mode else 'price_live_enterprise',
         }
 
