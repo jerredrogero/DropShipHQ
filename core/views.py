@@ -104,6 +104,26 @@ class AuthView(View):
             'signup_form': signup_form
         })
 
+class CustomPasswordResetView(auth_views.PasswordResetView):
+    template_name = 'registration/password_reset_form.html'
+    email_template_name = 'registration/password_reset_email.html'
+    subject_template_name = 'registration/password_reset_subject.txt'
+    success_url = reverse_lazy('password_reset_done')
+
+class CustomPasswordResetDoneView(auth_views.PasswordResetDoneView):
+    template_name = 'registration/password_reset_done.html'
+
+class CustomPasswordResetConfirmView(auth_views.PasswordResetConfirmView):
+    template_name = 'registration/password_reset_confirm.html'
+    success_url = reverse_lazy('password_reset_complete')
+
+class CustomPasswordResetCompleteView(auth_views.PasswordResetCompleteView):
+    template_name = 'registration/password_reset_complete.html'
+
+    def get(self, request, *args, **kwargs):
+        messages.success(request, "Your password has been set. You may go ahead and log in now.")
+        return super().get(request, *args, **kwargs)
+
 @login_required
 def dashboard(request):
     # Get date range and search query from request parameters
@@ -445,25 +465,6 @@ def calculate_roc(purchase_price, reimbursement_price, cashback_percentage):
         "roc": float(roc),
         "result": result
     }
-
-class CustomPasswordResetView(auth_views.PasswordResetView):
-    template_name = 'registration/password_reset_form.html'
-    email_template_name = 'registration/password_reset_email.html'
-    success_url = reverse_lazy('password_reset_done')
-
-class CustomPasswordResetDoneView(auth_views.PasswordResetDoneView):
-    template_name = 'registration/password_reset_done.html'
-
-class CustomPasswordResetConfirmView(auth_views.PasswordResetConfirmView):
-    template_name = 'registration/password_reset_confirm.html'
-    success_url = reverse_lazy('password_reset_complete')
-
-class CustomPasswordResetCompleteView(auth_views.PasswordResetCompleteView):
-    template_name = 'registration/password_reset_complete.html'
-
-    def get(self, request, *args, **kwargs):
-        messages.success(request, "Your password has been set. You may go ahead and log in now.")
-        return super().get(request, *args, **kwargs)
 
 @csrf_exempt  # Stripe sends POST requests without CSRF tokens
 def stripe_webhook(request):
