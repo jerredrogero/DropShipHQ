@@ -73,6 +73,7 @@ INSTALLED_APPS = [
     'core',
     'widget_tweaks',
     # ... any other apps you have ...
+    'django_celery_beat',
 ]
 
 MIDDLEWARE = [
@@ -209,5 +210,18 @@ LOGGING = {
             'level': 'INFO',
             'propagate': True,
         },
+    },
+}
+
+CELERY_BROKER_URL = 'redis://localhost:6379/0'  # Use Redis as message broker
+CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
+CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'
+
+from celery.schedules import crontab
+
+CELERY_BEAT_SCHEDULE = {
+    'refresh-order-limits-daily': {
+        'task': 'core.tasks.refresh_order_limits',
+        'schedule': crontab(hour=0, minute=0),  # Run daily at midnight
     },
 }

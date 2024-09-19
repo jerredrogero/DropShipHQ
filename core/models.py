@@ -4,6 +4,7 @@ from django.utils import timezone
 from django.db.models.signals import post_save, post_delete
 from django.dispatch import receiver
 from django.db.models.signals import post_save
+from dateutil.relativedelta import relativedelta
 
 
 
@@ -19,10 +20,14 @@ class UserProfile(models.Model):
 def create_or_update_user_profile(sender, instance, created, **kwargs):
     if created:
         UserProfile.objects.create(user=instance)
+        # Create a default subscription for the user
+        Subscription.objects.create(user=instance)
     else:
-        # Use get_or_create to handle cases where UserProfile might not exist yet
+        # Use get_or_create to handle cases where UserProfile or Subscription might not exist yet
         profile, _ = UserProfile.objects.get_or_create(user=instance)
-        profile.save() 
+        subscription, _ = Subscription.objects.get_or_create(user=instance)
+        profile.save()
+        subscription.save() 
 
 class BuyingGroup(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True)
@@ -127,6 +132,8 @@ class Subscription(models.Model):
     status = models.CharField(max_length=20, choices=[('active', 'Active'), ('inactive', 'Inactive')], default='active')
     order_count = models.IntegerField(default=0)
     stripe_subscription_id = models.CharField(max_length=255, null=True, blank=True)
+    subscription_start_date = models.DateTimeField(default=timezone.now)
+    next_refresh_date = models.DateTimeField(null=True, blank=True)
 
     def get_plan_display(self):
         return dict(self.PLAN_CHOICES)[self.plan]
@@ -134,14 +141,15 @@ class Subscription(models.Model):
     def get_order_limit(self):
         limits = {
             'FREE': 5,
-            'STARTER': 30,
-            'PRO': 100,
+            'STARTER': 50,  # Updated from 30 to 50
+            'PRO': 200,      # Updated from 100 to 200
             'PREMIUM': 500,
             'ENTERPRISE': 'Unlimited'
         }
         return limits[self.plan]
 
     def can_create_order(self):
+        self.refresh_order_limit()  # Check and refresh if needed
         limit = self.get_order_limit()
         if limit == 'Unlimited':
             return True
@@ -157,3 +165,30 @@ class Subscription(models.Model):
 
     def __str__(self):
         return f"{self.user.username}'s {self.get_plan_display()} Subscription"
+
+    def save(self, *args, **kwargs):
+        if not self.next_refresh_date:
+            self.next_refresh_date = timezone.now() + relativedelta(months=1)
+        super().save(*args, **kwargs)
+
+    def refresh_order_limit(self):
+        now = timezone.now()
+        if not self.next_refresh_date:
+            self.next_refresh_date = now + relativedelta(months=1)
+            self.save()
+        elif now >= self.next_refresh_date:
+            self.order_count = 0
+            self.next_refresh_date = now + relativedelta(months=1)
+            self.save()
+
+    def orders_left(self):
+        limit = self.get_order_limit()
+        if limit == 'Unlimited':
+            return 'Unlimited'
+        return max(0, limit - self.order_count)
+
+    def days_until_refresh(self):
+        if not self.next_refresh_date:
+            return None
+        days = (self.next_refresh_date - timezone.now()).days
+        return max(0, days)

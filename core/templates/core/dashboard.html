@@ -86,11 +86,18 @@
                     <div class="alert alert-info" role="alert">
                         Your current plan: {{ subscription.get_plan_display }}
                         <br>
-                        Orders created this month: {{ subscription.order_count }} / 
                         {% if subscription.get_order_limit == 'Unlimited' %}
-                            Unlimited
+                            You have unlimited orders available.
                         {% else %}
-                            {{ subscription.get_order_limit }}
+                            Orders left this month: {{ orders_left|default:"0" }} / {{ subscription.get_order_limit }}
+                        {% endif %}
+                        <br>
+                        {% if days_until_refresh == 0 %}
+                            Your order limit will refresh today.
+                        {% elif days_until_refresh is not None %}
+                            Days until next refresh: {{ days_until_refresh }}
+                        {% else %}
+                            Next refresh date not set.
                         {% endif %}
                     </div>
                     {% if form %}

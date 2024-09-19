@@ -20,7 +20,6 @@ urlpatterns = [
     path('reset/done/', views.CustomPasswordResetCompleteView.as_view(), name='password_reset_complete'),
     path('delete-order/<int:order_id>/', views.delete_order, name='delete_order'),
     path('settings/', views.account_settings, name='settings'),
-    path('bfmr-deals/', bfmr_deals, name='bfmr_deals'),
     path('edit-order/<int:order_id>/', views.edit_order, name='edit_order'),
     path('deal-calculator/', views.deal_calculator, name='deal_calculator'),
     path('delete-buying-group/<int:buying_group_id>/', views.delete_buying_group, name='delete_buying_group'),

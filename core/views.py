@@ -36,7 +36,9 @@ from django.contrib.auth import login, authenticate
 from django.views import View
 from django.contrib import messages
 from django.views.generic import TemplateView
-from .decorators import check_subscription
+from .decorators import check_subscription, subscription_required
+from .mixins import SubscriptionRequiredMixin
+from dateutil.relativedelta import relativedelta
 
 logger = logging.getLogger(__name__)
 stripe.api_key = django_settings.STRIPE_SECRET_KEY
@@ -170,8 +172,12 @@ def dashboard(request):
         summary['total_reimbursed'] - summary['total_cost'] + summary['total_cash_back']
     )
 
-    subscription, created = Subscription.objects.get_or_create(user=request.user, defaults={'plan': 'FREE', 'status': 'active'})
-
+    subscription, created = Subscription.objects.get_or_create(user=request.user)
+    
+    if created or not subscription.next_refresh_date:
+        subscription.next_refresh_date = timezone.now() + relativedelta(months=1)
+        subscription.save()
+    
     # Handle form submission for adding new order
     if request.method == 'POST':
         form = OrderForm(request.POST, user=request.user)
@@ -180,6 +186,7 @@ def dashboard(request):
                 order = form.save(commit=False)
                 order.user = request.user
                 order.save()
+                subscription.increment_order_count()
                 messages.success(request, 'Order added successfully.')
                 return redirect('dashboard')
             else:
@@ -213,6 +220,8 @@ def dashboard(request):
         'end_date': end_date,
         'search_query': search_query,
         'subscription': subscription,
+        'orders_left': subscription.orders_left(),
+        'days_until_refresh': subscription.days_until_refresh() or 0,
     }
 
     return render(request, 'core/dashboard.html', context)
@@ -331,6 +340,7 @@ def delete_buying_group(request, buying_group_id):
 
 @csrf_exempt
 @login_required
+@subscription_required(allowed_plans=['PRO', 'PREMIUM', 'ENTERPRISE'])
 def bfmr_deals(request):
     try:
         api_credentials = APICredentials.objects.get(user=request.user)
@@ -554,6 +564,8 @@ def handle_checkout_session(session):
         subscription.status = 'active'
         stripe_subscription = stripe.Subscription.retrieve(subscription.stripe_subscription_id)
         subscription.end_date = timezone.make_aware(datetime.fromtimestamp(stripe_subscription.current_period_end))
+        subscription.subscription_start_date = timezone.now()
+        subscription.next_refresh_date = subscription.subscription_start_date + relativedelta(months=1)
         subscription.save()
 
         logger.info(f"After update - User: {user.username}, New plan: {subscription.plan}")
