@@ -197,7 +197,12 @@ def dashboard(request):
     cards = Card.objects.filter(user=request.user)
 
     context = {
-        'orders': orders.values('id', 'date', 'buying_group__name', 'account__name', 'order_number', 'tracking_number', 'product', 'merchant__name', 'card__name', 'cost', 'reimbursed', 'cash_back', 'paid'),
+        'orders': orders.values(
+            'id', 'date', 'buying_group__name', 'account__name', 'order_number', 
+            'tracking_number', 'product', 'merchant__name', 'card__name', 
+            'cost', 'reimbursed', 'cash_back', 'paid',
+            'buying_group_id', 'account_id', 'merchant_id', 'card_id'
+        ),
         'summary': summary,
         'form': form,
         'buying_groups': buying_groups,

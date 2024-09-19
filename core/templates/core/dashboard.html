@@ -4,204 +4,292 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'core/css/styles.css' %}">
-<style>
-    .edit-mode .editable {
-        background-color: #fff3cd;
-        padding: 2px;
-        border: 1px solid #ffeeba;
-    }
-</style>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jquery-resizable-columns/0.2.3/jquery.resizableColumns.min.css">
 {% endblock %}
 
 {% block content %}
-<div class="container mt-4">
+<div class="container-fluid mt-4">
     <!-- Date range and search form -->
-    <form method="get" class="mb-4">
-        <div class="row">
-            <div class="col-md-3">
-                <label for="start_date">Start Date:</label>
-                <input type="date" id="start_date" name="start_date" class="form-control" value="{{ start_date|date:'Y-m-d' }}">
-            </div>
-            <div class="col-md-3">
-                <label for="end_date">End Date:</label>
-                <input type="date" id="end_date" name="end_date" class="form-control" value="{{ end_date|date:'Y-m-d' }}">
-            </div>
-            <div class="col-md-4">
-                <label for="search">Search:</label>
-                <input type="text" id="search" name="search" class="form-control" value="{{ search_query }}" placeholder="Order #, Tracking #, or Product">
-            </div>
-            <div class="col-md-2 align-self-end">
-                <button type="submit" class="btn btn-primary w-100">Apply</button>
-            </div>
+    <div class="row">
+        <div class="col-12">
+            <form method="get" class="mb-4">
+                <div class="row">
+                    <div class="col-md-3">
+                        <label for="start_date">Start Date:</label>
+                        <input type="date" id="start_date" name="start_date" class="form-control" value="{{ start_date|date:'Y-m-d' }}">
+                    </div>
+                    <div class="col-md-3">
+                        <label for="end_date">End Date:</label>
+                        <input type="date" id="end_date" name="end_date" class="form-control" value="{{ end_date|date:'Y-m-d' }}">
+                    </div>
+                    <div class="col-md-4">
+                        <label for="search">Search:</label>
+                        <input type="text" id="search" name="search" class="form-control" value="{{ search_query }}" placeholder="Order #, Tracking #, or Product">
+                    </div>
+                    <div class="col-md-2 align-self-end">
+                        <button type="submit" class="btn btn-primary w-100">Apply</button>
+                    </div>
+                </div>
+            </form>
         </div>
-    </form>
+    </div>
 
     <!-- Summary section -->
-    <h3 class="mb-3">Summary {% if is_filtered %}(Filtered: {{ start_date|date:"M d, Y" }} - {{ end_date|date:"M d, Y" }}){% endif %}</h3>
-    <div class="row row-cols-1 row-cols-sm-2 row-cols-md-4 g-4 mb-4">
-        <div class="col">
-            <div class="card h-100">
-                <div class="card-body">
-                    <h5 class="card-title">Total Cost</h5>
-                    <p class="card-text">${{ summary.total_cost|default:"0.00"|floatformat:2 }}</p>
+    <div class="row">
+        <div class="col-12">
+            <h3 class="mb-3">Summary {% if is_filtered %}(Filtered: {{ start_date|date:"M d, Y" }} - {{ end_date|date:"M d, Y" }}){% endif %}</h3>
+            <div class="row row-cols-1 row-cols-sm-2 row-cols-md-4 g-4 mb-4">
+                <div class="col">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <h5 class="card-title">Total Cost</h5>
+                            <p class="card-text">${{ summary.total_cost|default:"0.00"|floatformat:2 }}</p>
+                        </div>
+                    </div>
                 </div>
-            </div>
-        </div>
-        <div class="col">
-            <div class="card h-100">
-                <div class="card-body">
-                    <h5 class="card-title">Total Reimbursed</h5>
-                    <p class="card-text">${{ summary.total_reimbursed|default:"0.00"|floatformat:2 }}</p>
+                <div class="col">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <h5 class="card-title">Total Reimbursed</h5>
+                            <p class="card-text">${{ summary.total_reimbursed|default:"0.00"|floatformat:2 }}</p>
+                        </div>
+                    </div>
                 </div>
-            </div>
-        </div>
-        <div class="col">
-            <div class="card h-100">
-                <div class="card-body">
-                    <h5 class="card-title">Total Cash Back</h5>
-                    <p class="card-text">${{ summary.total_cash_back|default:"0.00"|floatformat:2 }}</p>
+                <div class="col">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <h5 class="card-title">Total Cash Back</h5>
+                            <p class="card-text">${{ summary.total_cash_back|default:"0.00"|floatformat:2 }}</p>
+                        </div>
+                    </div>
                 </div>
-            </div>
-        </div>
-        <div class="col">
-            <div class="card h-100">
-                <div class="card-body">
-                    <h5 class="card-title">Total Profit</h5>
-                    <p class="card-text">${{ summary.total_profit|default:"0.00"|floatformat:2 }}</p>
+                <div class="col">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <h5 class="card-title">Total Profit</h5>
+                            <p class="card-text">${{ summary.total_profit|default:"0.00"|floatformat:2 }}</p>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
     <!-- Order creation form -->
-    <div class="card mb-4 add-new-order">
-        <div class="card-header bg-primary text-white">
-            <h3 class="mb-0 fs-5">Add New Order</h3>
-        </div>
-        <div class="card-body">
-            <div class="alert alert-info" role="alert">
-                Your current plan: {{ subscription.get_plan_display }}
-                <br>
-                Orders created this month: {{ subscription.order_count }} / 
-                {% if subscription.get_order_limit == 'Unlimited' %}
-                    Unlimited
-                {% else %}
-                    {{ subscription.get_order_limit }}
-                {% endif %}
-            </div>
-            {% if form %}
-                <form method="post" class="row g-2">
-                    {% csrf_token %}
-                    {% for field in form %}
-                    <div class="col-md-4 col-lg-3">
-                        <div class="form-group">
-                            <label for="{{ field.id_for_label }}" class="form-label small">{{ field.label }}</label>
-                            {% if field.field.widget.input_type == 'checkbox' %}
-                                <div class="form-check">
-                                    {{ field }}
-                                    <label class="form-check-label small" for="{{ field.id_for_label }}">{{ field.label }}</label>
-                                </div>
-                            {% else %}
-                                {{ field|add_class:"form-control form-control-sm" }}
-                            {% endif %}
-                            {% if field.errors %}
-                            <div class="invalid-feedback d-block small">
-                                {{ field.errors|join:", " }}
-                            </div>
-                            {% endif %}
-                        </div>
-                    </div>
-                    {% endfor %}
-                    <div class="col-12 mt-3">
-                        <button type="submit" class="btn btn-success">Create Order</button>
-                    </div>
-                </form>
-            {% else %}
-                <div class="alert alert-warning" role="alert">
-                    You've reached the maximum number of orders for your current plan. Please <a href="{% url 'pricing' %}">upgrade your plan</a> to create more orders.
+    <div class="row">
+        <div class="col-12">
+            <div class="card mb-4 add-new-order">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="mb-0 fs-5">Add New Order</h3>
                 </div>
-            {% endif %}
+                <div class="card-body">
+                    <div class="alert alert-info" role="alert">
+                        Your current plan: {{ subscription.get_plan_display }}
+                        <br>
+                        Orders created this month: {{ subscription.order_count }} / 
+                        {% if subscription.get_order_limit == 'Unlimited' %}
+                            Unlimited
+                        {% else %}
+                            {{ subscription.get_order_limit }}
+                        {% endif %}
+                    </div>
+                    {% if form %}
+                        <form method="post" class="row g-2">
+                            {% csrf_token %}
+                            {% for field in form %}
+                            <div class="col-md-4 col-lg-3">
+                                <div class="form-group">
+                                    <label for="{{ field.id_for_label }}" class="form-label small">{{ field.label }}</label>
+                                    {% if field.field.widget.input_type == 'checkbox' %}
+                                        <div class="form-check">
+                                            {{ field }}
+                                            <label class="form-check-label small" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                        </div>
+                                    {% else %}
+                                        {{ field|add_class:"form-control form-control-sm" }}
+                                    {% endif %}
+                                    {% if field.errors %}
+                                    <div class="invalid-feedback d-block small">
+                                        {{ field.errors|join:", " }}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            {% endfor %}
+                            <div class="col-12 mt-3">
+                                <button type="submit" class="btn btn-success">Create Order</button>
+                            </div>
+                        </form>
+                    {% else %}
+                        <div class="alert alert-warning" role="alert">
+                            You've reached the maximum number of orders for your current plan. Please <a href="{% url 'pricing' %}">upgrade your plan</a> to create more orders.
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
         </div>
     </div>
 
     <!-- Orders table -->
-    <h2 class="mt-4">Your Orders</h2>
-    <div class="table-responsive">
-        <table class="table table-striped table-sm">
-            <thead>
-                <tr>
-                    <th>Date</th>
-                    <th>Buying Group</th>
-                    <th>Account</th>
-                    <th>Order Number</th>
-                    <th>Tracking Number</th>
-                    <th>Product</th>
-                    <th>Merchant</th>
-                    <th>Card</th>
-                    <th>Cost</th>
-                    <th>Reimbursed</th>
-                    <th>Cash Back</th>
-                    <th>Paid</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for order in orders %}
-                <tr id="order-{{ order.id }}" class="{% if order.paid %}table-success{% endif %}">
-                    <td><input type="date" class="editable form-control" data-field="date" value="{{ order.date|date:'Y-m-d' }}" disabled></td>
-                    <td>
-                        <select class="editable form-control" data-field="buying_group" disabled>
-                            <option value="">---------</option>
-                            {% for group in buying_groups %}
-                                <option value="{{ group.id }}" {% if order.buying_group_id == group.id %}selected{% endif %}>{{ group.name }}</option>
-                            {% endfor %}
-                        </select>
-                    </td>
-                    <td>
-                        <select class="editable form-control" data-field="account" disabled>
-                            <option value="">---------</option>
-                            {% for account in accounts %}
-                                <option value="{{ account.id }}" {% if order.account_id == account.id %}selected{% endif %}>{{ account.name }}</option>
-                            {% endfor %}
-                        </select>
-                    </td>
-                    <td><input type="text" class="editable form-control" data-field="order_number" value="{{ order.order_number }}" disabled></td>
-                    <td><input type="text" class="editable form-control" data-field="tracking_number" value="{{ order.tracking_number }}" disabled></td>
-                    <td><input type="text" class="editable form-control" data-field="product" value="{{ order.product }}" disabled></td>
-                    <td>
-                        <select class="editable form-control" data-field="merchant" disabled>
-                            <option value="">---------</option>
-                            {% for merchant in merchants %}
-                                <option value="{{ merchant.id }}" {% if order.merchant_id == merchant.id %}selected{% endif %}>{{ merchant.name }}</option>
-                            {% endfor %}
-                        </select>
-                    </td>
-                    <td>
-                        <select class="editable form-control" data-field="card" disabled>
-                            <option value="">---------</option>
-                            {% for card in cards %}
-                                <option value="{{ card.id }}" {% if order.card_id == card.id %}selected{% endif %}>{{ card.name }}</option>
-                            {% endfor %}
-                        </select>
-                    </td>
-                    <td><input type="number" step="0.01" class="editable form-control" data-field="cost" value="{{ order.cost }}" disabled></td>
-                    <td><input type="number" step="0.01" class="editable form-control" data-field="reimbursed" value="{{ order.reimbursed }}" disabled></td>
-                    <td><input type="number" step="0.01" class="editable form-control" data-field="cash_back" value="{{ order.cash_back }}" disabled></td>
-                    <td>
-                        <input type="checkbox" class="paid-checkbox" data-order-id="{{ order.id }}" {% if order.paid %}checked{% endif %}>
-                    </td>
-                    <td>
-                        <button class="btn btn-sm btn-primary edit-order" data-order-id="{{ order.id }}">Edit</button>
-                        <button class="btn btn-sm btn-danger delete-order" data-order-id="{{ order.id }}">Delete</button>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+    <div class="row mb-3">
+        <div class="col-12 text-right">
+            <div class="dropdown">
+                <button class="btn btn-secondary dropdown-toggle" type="button" id="manageColumnsDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                    Manage Columns
+                </button>
+                <ul class="dropdown-menu" aria-labelledby="manageColumnsDropdown">
+                    <li>
+                        <label class="dropdown-item">
+                            <input type="checkbox" class="toggle-column" data-column="date" checked> Date
+                        </label>
+                    </li>
+                    <li>
+                        <label class="dropdown-item">
+                            <input type="checkbox" class="toggle-column" data-column="buying_group" checked> Buying Group
+                        </label>
+                    </li>
+                    <li>
+                        <label class="dropdown-item">
+                            <input type="checkbox" class="toggle-column" data-column="account" checked> Account
+                        </label>
+                    </li>
+                    <li>
+                        <label class="dropdown-item">
+                            <input type="checkbox" class="toggle-column" data-column="order_number" checked> Order Number
+                        </label>
+                    </li>
+                    <li>
+                        <label class="dropdown-item">
+                            <input type="checkbox" class="toggle-column" data-column="tracking_number" checked> Tracking Number
+                        </label>
+                    </li>
+                    <li>
+                        <label class="dropdown-item">
+                            <input type="checkbox" class="toggle-column" data-column="product" checked> Product
+                        </label>
+                    </li>
+                    <li>
+                        <label class="dropdown-item">
+                            <input type="checkbox" class="toggle-column" data-column="merchant" checked> Merchant
+                        </label>
+                    </li>
+                    <li>
+                        <label class="dropdown-item">
+                            <input type="checkbox" class="toggle-column" data-column="card" checked> Card
+                        </label>
+                    </li>
+                    <li>
+                        <label class="dropdown-item">
+                            <input type="checkbox" class="toggle-column" data-column="cost" checked> Cost
+                        </label>
+                    </li>
+                    <li>
+                        <label class="dropdown-item">
+                            <input type="checkbox" class="toggle-column" data-column="reimbursed" checked> Reimbursed
+                        </label>
+                    </li>
+                    <li>
+                        <label class="dropdown-item">
+                            <input type="checkbox" class="toggle-column" data-column="cash_back" checked> Cash Back
+                        </label>
+                    </li>
+                    <li>
+                        <label class="dropdown-item">
+                            <input type="checkbox" class="toggle-column" data-column="paid" checked> Paid
+                        </label>
+                    </li>
+                    <li>
+                        <label class="dropdown-item">
+                            <input type="checkbox" class="toggle-column" data-column="actions" checked> Actions
+                        </label>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-12">
+            <h2 class="mt-4">Your Orders</h2>
+            <div class="table-responsive">
+                <table class="table table-striped" id="ordersTable">
+                    <thead>
+                        <tr>
+                            <th data-field="date">Date</th>
+                            <th data-field="buying_group">Buying Group</th>
+                            <th data-field="account">Account</th>
+                            <th data-field="order_number">Order Number</th>
+                            <th data-field="tracking_number">Tracking Number</th>
+                            <th data-field="product">Product</th>
+                            <th data-field="merchant">Merchant</th>
+                            <th data-field="card">Card</th>
+                            <th data-field="cost">Cost</th>
+                            <th data-field="reimbursed">Reimbursed</th>
+                            <th data-field="cash_back">Cash Back</th>
+                            <th data-field="paid">Paid</th>
+                            <th data-field="actions">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for order in orders %}
+                        <tr id="order-{{ order.id }}" class="{% if order.paid %}table-success{% endif %}">
+                            <td data-field="date"><input type="date" class="editable form-control" data-field="date" value="{{ order.date|date:'Y-m-d' }}" disabled></td>
+                            <td data-field="buying_group">
+                                <select class="editable form-control" data-field="buying_group" disabled>
+                                    <option value="">---------</option>
+                                    {% for group in buying_groups %}
+                                        <option value="{{ group.id }}" {% if order.buying_group_id == group.id %}selected{% endif %}>{{ group.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </td>
+                            <td data-field="account">
+                                <select class="editable form-control" data-field="account" disabled>
+                                    <option value="">---------</option>
+                                    {% for account in accounts %}
+                                        <option value="{{ account.id }}" {% if order.account_id == account.id %}selected{% endif %}>{{ account.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </td>
+                            <td data-field="order_number"><input type="text" class="editable form-control" data-field="order_number" value="{{ order.order_number }}" disabled></td>
+                            <td data-field="tracking_number"><input type="text" class="editable form-control" data-field="tracking_number" value="{{ order.tracking_number }}" disabled></td>
+                            <td data-field="product"><input type="text" class="editable form-control" data-field="product" value="{{ order.product }}" disabled></td>
+                            <td data-field="merchant">
+                                <select class="editable form-control" data-field="merchant" disabled>
+                                    <option value="">---------</option>
+                                    {% for merchant in merchants %}
+                                        <option value="{{ merchant.id }}" {% if order.merchant_id == merchant.id %}selected{% endif %}>{{ merchant.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </td>
+                            <td data-field="card">
+                                <select class="editable form-control" data-field="card" disabled>
+                                    <option value="">---------</option>
+                                    {% for card in cards %}
+                                        <option value="{{ card.id }}" {% if order.card_id == card.id %}selected{% endif %}>{{ card.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </td>
+                            <td data-field="cost"><input type="number" step="0.01" class="editable form-control" data-field="cost" value="{{ order.cost }}" disabled></td>
+                            <td data-field="reimbursed"><input type="number" step="0.01" class="editable form-control" data-field="reimbursed" value="{{ order.reimbursed }}" disabled></td>
+                            <td data-field="cash_back"><input type="number" step="0.01" class="editable form-control" data-field="cash_back" value="{{ order.cash_back }}" disabled></td>
+                            <td data-field="paid">
+                                <input type="checkbox" class="paid-checkbox" data-order-id="{{ order.id }}" {% if order.paid %}checked{% endif %}>
+                            </td>
+                            <td data-field="actions">
+                                <button class="btn btn-sm btn-primary edit-order" data-order-id="{{ order.id }}">Edit</button>
+                                <button class="btn btn-sm btn-danger delete-order" data-order-id="{{ order.id }}">Delete</button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
     </div>
 </div>
 
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
 <script>
 $(document).ready(function() {
     // Function to show toast notification
@@ -221,6 +309,97 @@ $(document).ready(function() {
         $('body').append(toast);
         toast.toast({ delay: 3000 }).toast('show');
     }
+
+    // Load column preferences from local storage
+    function loadColumnPreferences() {
+        var hiddenColumns = JSON.parse(localStorage.getItem('hiddenColumns')) || [];
+        hiddenColumns.forEach(function(column) {
+            $('th[data-field="' + column + '"], td[data-field="' + column + '"]').addClass('hidden-column');
+            $('.toggle-column[data-column="' + column + '"]').prop('checked', false);
+        });
+    }
+
+    // Save column preferences to local storage
+    function saveColumnPreferences() {
+        var hiddenColumns = [];
+        $('th[data-field]').each(function() {
+            var column = $(this).data('field');
+            if (!$('.toggle-column[data-column="' + column + '"]').is(':checked')) {
+                hiddenColumns.push(column);
+            }
+        });
+        localStorage.setItem('hiddenColumns', JSON.stringify(hiddenColumns));
+    }
+
+    // Function to initialize resizable columns
+    function initializeResizableColumns() {
+        let isResizing = false;
+        let currentTh = null;
+        let startX, startWidth;
+
+        // Clear existing event listeners to prevent duplication
+        document.querySelectorAll('th').forEach(th => {
+            if (th._mousedownHandler) {
+                th.removeEventListener('mousedown', th._mousedownHandler);
+            }
+        });
+
+        // Add mousedown event listeners to visible th elements
+        document.querySelectorAll('th').forEach(th => {
+            if (!th.classList.contains('hidden-column')) {
+                const handleMouseDown = function(e) {
+                    if (e.offsetX > th.offsetWidth - 5) {
+                        isResizing = true;
+                        currentTh = th;
+                        startX = e.pageX;
+                        startWidth = th.offsetWidth;
+                        document.body.style.cursor = 'col-resize';
+                        e.preventDefault(); // Prevent text selection
+                    }
+                };
+                th._mousedownHandler = handleMouseDown;
+                th.addEventListener('mousedown', handleMouseDown);
+            }
+        });
+
+        // Mousemove event to resize columns with debouncing
+        let resizeTimeout;
+        document.addEventListener('mousemove', function(e) {
+            if (!isResizing || !currentTh) return;
+            clearTimeout(resizeTimeout);
+            resizeTimeout = setTimeout(function() {
+                const width = startWidth + (e.pageX - startX);
+                if (width > 50) { // Minimum width
+                    currentTh.style.width = `${width}px`;
+                }
+            }, 10);
+        });
+
+        // Mouseup event to stop resizing
+        document.addEventListener('mouseup', function() {
+            if (isResizing) {
+                isResizing = false;
+                currentTh = null;
+                document.body.style.cursor = 'default';
+            }
+        });
+    }
+
+    // Toggle column visibility
+    $('.toggle-column').change(function() {
+        var column = $(this).data('column');
+        if ($(this).is(':checked')) {
+            $('th[data-field="' + column + '"], td[data-field="' + column + '"]').removeClass('hidden-column');
+        } else {
+            $('th[data-field="' + column + '"], td[data-field="' + column + '"]').addClass('hidden-column');
+        }
+        saveColumnPreferences();
+        initializeResizableColumns(); // Reinitialize resizing after toggling
+    });
+
+    // Initialize column preferences and resizable columns on page load
+    loadColumnPreferences();
+    initializeResizableColumns();
 
     // Edit button click handler
     $('.edit-order').click(function(e) {
@@ -336,10 +515,12 @@ $(document).ready(function() {
     $(document).on('change', '.paid-checkbox', function() {
         var orderId = $(this).data('order-id');
         var isPaid = $(this).prop('checked');
+        console.log('Checkbox changed for order:', orderId, 'isPaid:', isPaid);
         updatePaidStatus(orderId, isPaid);
     });
 
     function updatePaidStatus(orderId, isPaid) {
+        console.log('Updating paid status for order:', orderId, 'isPaid:', isPaid);
         $.ajax({
             url: '/update-paid-status/' + orderId + '/',
             method: 'POST',
@@ -348,18 +529,31 @@ $(document).ready(function() {
             },
             headers: {'X-CSRFToken': '{{ csrf_token }}'},
             success: function(response) {
+                console.log('AJAX success:', response);
                 if (response.success) {
-                    $('#order-' + orderId).toggleClass('table-success', isPaid);
+                    var $row = $('#order-' + orderId);
+                    console.log('Row before class change:', $row.attr('class'));
+                    $row.toggleClass('table-success', isPaid);
+                    console.log('Row after class change:', $row.attr('class'));
                     showToast('Order paid status updated', 'success');
                 } else {
                     showToast('Error updating paid status: ' + JSON.stringify(response.errors), 'error');
+                    $('#order-' + orderId + ' .paid-checkbox').prop('checked', !isPaid);
                 }
             },
             error: function(xhr, status, error) {
+                console.log('AJAX error:', error);
                 showToast('Error updating paid status: ' + error, 'error');
+                $('#order-' + orderId + ' .paid-checkbox').prop('checked', !isPaid);
             }
         });
     }
+
+    $('.table td').each(function() {
+        if(this.offsetWidth < this.scrollWidth && !$(this).attr('title')) {
+            $(this).attr('title', $(this).text());
+        }
+    });
 });
 </script>
 {% endblock %}

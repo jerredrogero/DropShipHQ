@@ -91,7 +91,61 @@ footer {
 .card-body p {
     font-size: 1.25rem;
     font-weight: bold;
-    color: #007bff; /* Changed from #28a745 (green) to #007bff (blue) */
+    color: #28a745; /* This is a standard Bootstrap green color */
+}
+
+.edit-mode .editable {
+    background-color: #fff3cd;
+    padding: 2px;
+    border: 1px solid #ffeeba;
+}
+.table-responsive {
+    width: 100%;
+    overflow-x: auto;
+}
+.table {
+    width: 100%;
+    min-width: 1200px; /* Adjust this value based on your needs */
+    border-collapse: separate;
+    border-spacing: 0 8px; /* Adds vertical space between rows */
+}
+.table th {
+    border-bottom: 2px solid #dee2e6; /* Keep header border */
+    padding: 12px 8px;
+    position: relative;
+    background-clip: padding-box;
+}
+.table th::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 5px;
+    cursor: col-resize;
+    background-color: #f1f1f1;
+}
+.table th:hover::after {
+    background-color: #ddd;
+}
+.table td {
+    border: none; /* Remove cell borders */
+    padding: 12px 8px;
+    background-color: #f8f9fa; /* Light background for rows */
+}
+.table tr {
+    transition: all 0.3s ease;
+}
+.table tr:hover {
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+.table .order-number, .table .tracking-number {
+    min-width: 150px; /* Adjust this value based on your needs */
+}
+.add-new-order {
+    border: 1px solid #dee2e6;
+    border-radius: 0.25rem;
+    margin-bottom: 20px;
 }
 
 /* Feature Card Layout */
@@ -231,4 +285,44 @@ footer {
 .contact-sales-card:hover {
     box-shadow: 0 5px 15px rgba(0, 123, 255, 0.3);
     transform: translateY(-5px);
+}
+
+.rc-handle {
+    width: 7px;
+    cursor: col-resize;
+    background-color: #f1f1f1;
+    border-left: 1px solid #ddd;
+    border-right: 1px solid #ddd;
+}
+
+.rc-handle:hover {
+    background-color: #ddd;
+}
+
+/* Make date column more compact */
+.table th[data-field="date"],
+.table td[data-field="date"] {
+    width: 150px; /* Adjust as needed */
+    min-width: 100px;
+    max-width: 200px;
+}
+
+.table th[data-field="reimbursed"],
+.table td[data-field="reimbursed"] {
+    width: 100px; /* Adjust as needed */
+    min-width: 80px;
+    max-width: 150px;
+}
+
+/* Ensure input fields fit their containers */
+.table td[data-field="date"] input,
+.table td[data-field="reimbursed"] input,
+.table td[data-field="cost"] input,
+.table td[data-field="cash_back"] input {
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.hidden-column {
+    display: none;
 }
