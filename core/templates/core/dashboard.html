@@ -127,7 +127,7 @@
     <!-- Orders table -->
     <h2 class="mt-4">Your Orders</h2>
     <div class="table-responsive">
-        <table class="table table-striped">
+        <table class="table table-striped table-sm">
             <thead>
                 <tr>
                     <th>Date</th>
@@ -141,12 +141,13 @@
                     <th>Cost</th>
                     <th>Reimbursed</th>
                     <th>Cash Back</th>
+                    <th>Paid</th>
                     <th>Actions</th>
                 </tr>
             </thead>
             <tbody>
                 {% for order in orders %}
-                <tr id="order-{{ order.id }}">
+                <tr id="order-{{ order.id }}" class="{% if order.paid %}table-success{% endif %}">
                     <td><input type="date" class="editable form-control" data-field="date" value="{{ order.date|date:'Y-m-d' }}" disabled></td>
                     <td>
                         <select class="editable form-control" data-field="buying_group" disabled>
@@ -186,6 +187,9 @@
                     <td><input type="number" step="0.01" class="editable form-control" data-field="cost" value="{{ order.cost }}" disabled></td>
                     <td><input type="number" step="0.01" class="editable form-control" data-field="reimbursed" value="{{ order.reimbursed }}" disabled></td>
                     <td><input type="number" step="0.01" class="editable form-control" data-field="cash_back" value="{{ order.cash_back }}" disabled></td>
+                    <td>
+                        <input type="checkbox" class="paid-checkbox" data-order-id="{{ order.id }}" {% if order.paid %}checked{% endif %}>
+                    </td>
                     <td>
                         <button class="btn btn-sm btn-primary edit-order" data-order-id="{{ order.id }}">Edit</button>
                         <button class="btn btn-sm btn-danger delete-order" data-order-id="{{ order.id }}">Delete</button>
@@ -305,17 +309,6 @@ $(document).ready(function() {
         });
     }
 
-    function updateRowValues(row, data) {
-        for (var field in data) {
-            var element = row.find('[data-field="' + field + '"]');
-            if (element.is('select')) {
-                element.val(data[field]);
-            } else {
-                element.val(data[field]);
-            }
-        }
-    }
-
     // Delete button click handler
     $('.delete-order').click(function() {
         var orderId = $(this).data('order-id');
@@ -338,6 +331,35 @@ $(document).ready(function() {
             });
         }
     });
+
+    // Add this to your existing JavaScript code
+    $(document).on('change', '.paid-checkbox', function() {
+        var orderId = $(this).data('order-id');
+        var isPaid = $(this).prop('checked');
+        updatePaidStatus(orderId, isPaid);
+    });
+
+    function updatePaidStatus(orderId, isPaid) {
+        $.ajax({
+            url: '/update-paid-status/' + orderId + '/',
+            method: 'POST',
+            data: {
+                paid: isPaid
+            },
+            headers: {'X-CSRFToken': '{{ csrf_token }}'},
+            success: function(response) {
+                if (response.success) {
+                    $('#order-' + orderId).toggleClass('table-success', isPaid);
+                    showToast('Order paid status updated', 'success');
+                } else {
+                    showToast('Error updating paid status: ' + JSON.stringify(response.errors), 'error');
+                }
+            },
+            error: function(xhr, status, error) {
+                showToast('Error updating paid status: ' + error, 'error');
+            }
+        });
+    }
 });
 </script>
 {% endblock %}

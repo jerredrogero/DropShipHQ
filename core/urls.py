@@ -29,4 +29,5 @@ urlpatterns = [
     path('terms-of-service/', views.TermsOfServiceView.as_view(), name='terms_of_service'),
     path('privacy-policy/', views.PrivacyPolicyView.as_view(), name='privacy_policy'),
     path('webhook/', views.stripe_webhook, name='stripe_webhook'),
+    path('update-paid-status/<int:order_id>/', views.update_paid_status, name='update_paid_status'),
 ]

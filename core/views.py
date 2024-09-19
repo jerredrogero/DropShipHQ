@@ -197,7 +197,7 @@ def dashboard(request):
     cards = Card.objects.filter(user=request.user)
 
     context = {
-        'orders': orders,
+        'orders': orders.values('id', 'date', 'buying_group__name', 'account__name', 'order_number', 'tracking_number', 'product', 'merchant__name', 'card__name', 'cost', 'reimbursed', 'cash_back', 'paid'),
         'summary': summary,
         'form': form,
         'buying_groups': buying_groups,
@@ -217,7 +217,8 @@ def edit_order(request, order_id):
     if request.method == 'POST':
         form = OrderForm(request.POST, instance=order, user=request.user)
         if form.is_valid():
-            form.save()
+            order = form.save(commit=False)
+            order.save()
             return JsonResponse({'success': True})
         else:
             return JsonResponse({'success': False, 'errors': form.errors})
@@ -233,6 +234,15 @@ def delete_order(request, order_id):
         return JsonResponse({'success': True})
     except Order.DoesNotExist:
         return JsonResponse({'success': False, 'error': 'Order not found'}, status=404)
+    
+@login_required
+@require_POST
+def update_paid_status(request, order_id):
+    order = get_object_or_404(Order, id=order_id, user=request.user)
+    paid = request.POST.get('paid') == 'true'
+    order.paid = paid
+    order.save()
+    return JsonResponse({'success': True})
 
 @require_http_methods(["GET", "POST"])
 def logout_view(request):
