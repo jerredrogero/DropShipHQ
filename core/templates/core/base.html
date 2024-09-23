@@ -29,15 +29,32 @@
         }
         const csrftoken = getCookie('csrftoken');
     </script>
+    <link rel="apple-touch-icon" sizes="180x180" href="{% static 'core/images/favicon/apple-touch-icon.png' %}">
+    <link rel="icon" type="image/png" sizes="32x32" href="{% static 'core/images/favicon/favicon-32x32.png' %}">
+    <link rel="icon" type="image/png" sizes="16x16" href="{% static 'core/images/favicon/favicon-16x16.png' %}">
+    <link rel="manifest" href="{% static 'core/images/favicon/site.webmanifest' %}">
+    <link rel="mask-icon" href="{% static 'core/images/favicon/safari-pinned-tab.svg' %}" color="#5bbad5">
+    <link rel="shortcut icon" href="{% static 'core/images/favicon/favicon.ico' %}">
+    <meta name="msapplication-TileColor" content="#da532c">
+    <meta name="msapplication-config" content="{% static 'core/images/favicon/browserconfig.xml' %}">
+    <meta name="theme-color" content="#ffffff">
+
 </head>
 <body>
-    <div class="container-fluid">
+    
+    <header id="header">
         <nav class="navbar navbar-expand-lg navbar-light bg-light">
-            <div class="container">
-                <a class="navbar-brand" href="{% url 'home' %}">BuyingGroupPro</a>
-                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <div class="container-fluid">
+                <!-- Branding with Logo -->
+                <a class="navbar-brand d-flex align-items-center" href="{% url 'dashboard' %}">
+                    <img src="{% static 'core/images/BGP_Logo.svg' %}" alt="BGP Logo" width="40" height="40" class="d-inline-block align-text-top me-2">
+                    <span>BuyingGroupPro</span>
+                </a>
+                <!-- Navbar Toggler for Mobile -->
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
                     <span class="navbar-toggler-icon"></span>
                 </button>
+                <!-- Navbar Links -->
                 <div class="collapse navbar-collapse" id="navbarNav">
                     <ul class="navbar-nav ms-auto">
                         <li class="nav-item">
@@ -74,6 +91,7 @@
                 </div>
             </div>
         </nav>
+    </header>
 
         <div class="container mt-3">
             {% if messages %}

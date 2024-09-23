@@ -222,6 +222,7 @@ def dashboard(request):
         'subscription': subscription,
         'orders_left': subscription.orders_left(),
         'days_until_refresh': subscription.days_until_refresh() or 0,
+        'debug': django_settings.DEBUG,
     }
 
     return render(request, 'core/dashboard.html', context)

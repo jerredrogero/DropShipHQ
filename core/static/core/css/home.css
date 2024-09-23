@@ -40,3 +40,16 @@
 .tab-content {
     padding-top: 1rem;
 }
+
+/* Ensure the logo scales responsively */
+.navbar-brand img {
+    max-height: 40px; /* Adjust to match the height attribute */
+    width: auto;
+}
+
+/* Adjust spacing if needed */
+.navbar-brand span {
+    font-size: 1.25rem; /* Adjust font size as needed */
+    font-weight: bold;
+    color: #5fa225; /* Match your branding color */
+}
