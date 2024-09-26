@@ -29,4 +29,5 @@ urlpatterns = [
     path('privacy-policy/', views.PrivacyPolicyView.as_view(), name='privacy_policy'),
     path('webhook/', views.stripe_webhook, name='stripe_webhook'),
     path('update-paid-status/<int:order_id>/', views.update_paid_status, name='update_paid_status'),
+    path('export-orders/csv/', views.export_orders_csv, name='export_orders_csv'),
 ]

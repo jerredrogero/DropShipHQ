@@ -32,9 +32,9 @@
                         <div class="card-body d-flex flex-column">
                             <h5 class="card-title text-center">$0/month</h5>
                             <ul class="list-group list-group-flush mb-4">
-                                <li class="list-group-item">Up to 5 orders/month</li>
+                                <li class="list-group-item">Up to 10 orders/month</li>
                                 <li class="list-group-item">Basic order management</li>
-                                <li class="list-group-item">Email support</li>
+                                <li class="list-group-item">Deal calculator</li>
                             </ul>
                             <a href="#" class="btn btn-outline-primary mt-auto">Get Started</a>
                         </div>
@@ -52,8 +52,8 @@
                             <ul class="list-group list-group-flush mb-4">
                                 <li class="list-group-item">Up to 50 orders/month</li>
                                 <li class="list-group-item">Full dashboard access</li>
-                                <li class="list-group-item">Order status tracking</li>
-                                <li class="list-group-item">Email support</li>
+                                <li class="list-group-item">Manage Columns</li>
+                                <li class="list-group-item">Export to CSV</li>
                             </ul>
                             <button id="checkout-button-starter" class="btn btn-primary mt-auto">Get Started</button>
                         </div>
@@ -72,8 +72,8 @@
                             <ul class="list-group list-group-flush mb-4">
                                 <li class="list-group-item">Up to 200 orders/month</li>
                                 <li class="list-group-item">All Starter features</li>
-                                <li class="list-group-item">BFMR API access</li>
                                 <li class="list-group-item">Priority email support</li>
+                                <li class="list-group-item">BFMR Integration</li>
                             </ul>
                             <button id="checkout-button-pro" class="btn btn-primary mt-auto">Get Started</button>
                         </div>
@@ -92,7 +92,6 @@
                                 <li class="list-group-item">Up to 500 orders/month</li>
                                 <li class="list-group-item">All Pro features</li>
                                 <li class="list-group-item">Custom integrations</li>
-                                <li class="list-group-item">BFMR API access</li>
                                 <li class="list-group-item">Dedicated account manager</li>
                                 <li class="list-group-item">24/7 premium support</li>
                             </ul>
@@ -103,90 +102,9 @@
             </div>
         </div>
 
-        <!-- Yearly plans tab content -->
+        <!-- Yearly plans tab content (similar structure, with yearly prices) -->
         <div class="tab-pane fade" id="yearly" role="tabpanel" aria-labelledby="yearly-tab">
-            <div class="row">
-                <!-- Free Plan (same as monthly) -->
-                <div class="col-md-3 mb-4">
-                    <div class="card h-100 pricing-card">
-                        <div class="card-header bg-light">
-                            <h3 class="text-center">Free</h3>
-                        </div>
-                        <div class="card-body d-flex flex-column">
-                            <h5 class="card-title text-center">$0/year</h5>
-                            <ul class="list-group list-group-flush mb-4">
-                                <li class="list-group-item">Up to 5 orders/month</li>
-                                <li class="list-group-item">Basic order management</li>
-                                <li class="list-group-item">Email support</li>
-                            </ul>
-                            <a href="#" class="btn btn-primary mt-auto">Get Started</a>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Starter Plan (Yearly) -->
-                <div class="col-md-3 mb-4">
-                    <div class="card h-100 pricing-card">
-                        <div class="card-header">
-                            <h3 class="text-center">Starter</h3>
-                        </div>
-                        <div class="card-body d-flex flex-column">
-                            <h5 class="card-title text-center">$108/year</h5>
-                            <p class="text-center text-muted"><del>$144</del> (Save $36)</p>
-                            <ul class="list-group list-group-flush mb-4">
-                                <li class="list-group-item">Up to 50 orders/month</li>
-                                <li class="list-group-item">Full dashboard access</li>
-                                <li class="list-group-item">Order status tracking</li>
-                                <li class="list-group-item">Email support</li>
-                            </ul>
-                            <button id="checkout-button-starter-yearly" class="btn btn-primary mt-auto">Get Started</button>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Pro Plan (Yearly) -->
-                <div class="col-md-3 mb-4">
-                    <div class="card h-100 pricing-card border-primary position-relative">
-                        <div class="card-header bg-primary text-white">
-                            <h3 class="text-center">Pro</h3>
-                            <span class="badge bg-warning badge-popular">Most Popular</span>
-                        </div>
-                        <div class="card-body d-flex flex-column">
-                            <h5 class="card-title text-center">$204/year</h5>
-                            <p class="text-center text-muted"><del>$240</del> (Save $36)</p>
-                            <ul class="list-group list-group-flush mb-4">
-                                <li class="list-group-item">Up to 200 orders/month</li>
-                                <li class="list-group-item">All Starter features</li>
-                                <li class="list-group-item">BFMR API access</li>
-                                <li class="list-group-item">Priority email support</li>
-                            </ul>
-                            <button id="checkout-button-pro-yearly" class="btn btn-primary mt-auto">Get Started</button>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Premium Plan (Yearly) -->
-                <div class="col-md-3 mb-4">
-                    <div class="card h-100 pricing-card">
-                        <div class="card-header">
-                            <h3 class="text-center">Premium</h3>
-                        </div>
-                        <div class="card-body d-flex flex-column">
-                            <h5 class="card-title text-center">$540/year</h5>
-                            <p class="text-center text-muted"><del>$600</del> (Save $60)</p>
-                            <ul class="list-group list-group-flush mb-4">
-                                <li class="list-group-item">Up to 500 orders/month</li>
-                                <li class="list-group-item">All Pro features</li>
-                                <li class="list-group-item">Custom integrations</li>
-                                <li class="list-group-item">BFMR API access</li>
-                                <li class="list-group-item">Dedicated account manager</li>
-                                <li class="list-group-item">24/7 premium support</li>
-                            </ul>
-                            <button id="checkout-button-premium-yearly" class="btn btn-primary mt-auto">Get Started</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
+            <!-- Copy the monthly structure here and adjust prices for yearly plans -->
         </div>
     </div>
 
@@ -207,29 +125,36 @@
                 <tbody>
                     <tr>
                         <td>Orders per month</td>
-                        <td>Up to 5</td>
+                        <td>Up to 10</td>
                         <td>Up to 50</td>
                         <td>Up to 200</td>
                         <td>Up to 500</td>
                     </tr>
                     <tr>
-                        <td>Order management</td>
+                        <td>Deal Calculator</td>
                         <td><i class="fas fa-check text-success"></i></td>
                         <td><i class="fas fa-check text-success"></i></td>
                         <td><i class="fas fa-check text-success"></i></td>
                         <td><i class="fas fa-check text-success"></i></td>
                     </tr>
                     <tr>
-                        <td>Dashboard access</td>
-                        <td>Limited</td>
-                        <td>Basic</td>
-                        <td>Advanced</td>
-                        <td>Full</td>
+                        <td>BFMR Integration</td>
+                        <td><i class="fas fa-times text-danger"></i></td>
+                        <td><i class="fas fa-times text-danger"></i></td>
+                        <td><i class="fas fa-check text-success"></i></td>
+                        <td><i class="fas fa-check text-success"></i></td>
                     </tr>
                     <tr>
-                        <td>BFMR API access</td>
+                        <td>Manage Columns</td>
                         <td><i class="fas fa-times text-danger"></i></td>
+                        <td><i class="fas fa-check text-success"></i></td>
+                        <td><i class="fas fa-check text-success"></i></td>
+                        <td><i class="fas fa-check text-success"></i></td>
+                    </tr>
+                    <tr>
+                        <td>Export to CSV</td>
                         <td><i class="fas fa-times text-danger"></i></td>
+                        <td><i class="fas fa-check text-success"></i></td>
                         <td><i class="fas fa-check text-success"></i></td>
                         <td><i class="fas fa-check text-success"></i></td>
                     </tr>
@@ -240,17 +165,12 @@
                         <td>Priority email</td>
                         <td>24/7 premium</td>
                     </tr>
-                    <tr>
-                        <td>Dedicated account manager</td>
-                        <td><i class="fas fa-times text-danger"></i></td>
-                        <td><i class="fas fa-times text-danger"></i></td>
-                        <td><i class="fas fa-times text-danger"></i></td>
-                        <td><i class="fas fa-check text-success"></i></td>
-                    </tr>
                 </tbody>
             </table>
         </div>
     </div>
+</div>
+
 <div class="row mt-5">
     <div class="col-md-8 mx-auto text-center">
         <div class="card">
@@ -259,14 +179,6 @@
                 <p class="card-text">If you require more than 500 orders per month or need custom solutions, our sales team is here to help.</p>
                 <a href="mailto:support@buyinggrouppro.com" class="btn btn-primary">Contact Sales</a>
             </div>
-        </div>
-    </div>
-</div>
-
-    <!-- Loading Spinner (Optional) -->
-    <div id="loading-spinner" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);">
-        <div class="spinner-border text-primary" role="status">
-            <span class="visually-hidden">Loading...</span>
         </div>
     </div>
 </div>

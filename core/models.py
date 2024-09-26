@@ -192,3 +192,6 @@ class Subscription(models.Model):
             return None
         days = (self.next_refresh_date - timezone.now()).days
         return max(0, days)
+
+    def is_paid(self):
+        return self.plan in ['STARTER', 'PRO', 'PREMIUM', 'ENTERPRISE']

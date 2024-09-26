@@ -139,81 +139,95 @@
 
     <!-- Orders table -->
     <div class="row mb-3">
-        <div class="col-12 text-right">
-            <div class="dropdown">
-                <button class="btn btn-secondary dropdown-toggle" type="button" id="manageColumnsDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-                    Manage Columns
-                </button>
-                <ul class="dropdown-menu" aria-labelledby="manageColumnsDropdown">
-                    <li>
-                        <label class="dropdown-item">
-                            <input type="checkbox" class="toggle-column" data-column="date" checked> Date
-                        </label>
-                    </li>
-                    <li>
-                        <label class="dropdown-item">
-                            <input type="checkbox" class="toggle-column" data-column="buying_group" checked> Buying Group
-                        </label>
-                    </li>
-                    <li>
-                        <label class="dropdown-item">
-                            <input type="checkbox" class="toggle-column" data-column="account" checked> Account
-                        </label>
-                    </li>
-                    <li>
-                        <label class="dropdown-item">
-                            <input type="checkbox" class="toggle-column" data-column="order_number" checked> Order Number
-                        </label>
-                    </li>
-                    <li>
-                        <label class="dropdown-item">
-                            <input type="checkbox" class="toggle-column" data-column="tracking_number" checked> Tracking Number
-                        </label>
-                    </li>
-                    <li>
-                        <label class="dropdown-item">
-                            <input type="checkbox" class="toggle-column" data-column="product" checked> Product
-                        </label>
-                    </li>
-                    <li>
-                        <label class="dropdown-item">
-                            <input type="checkbox" class="toggle-column" data-column="merchant" checked> Merchant
-                        </label>
-                    </li>
-                    <li>
-                        <label class="dropdown-item">
-                            <input type="checkbox" class="toggle-column" data-column="card" checked> Card
-                        </label>
-                    </li>
-                    <li>
-                        <label class="dropdown-item">
-                            <input type="checkbox" class="toggle-column" data-column="cost" checked> Cost
-                        </label>
-                    </li>
-                    <li>
-                        <label class="dropdown-item">
-                            <input type="checkbox" class="toggle-column" data-column="reimbursed" checked> Reimbursed
-                        </label>
-                    </li>
-                    <li>
-                        <label class="dropdown-item">
-                            <input type="checkbox" class="toggle-column" data-column="cash_back" checked> Cash Back
-                        </label>
-                    </li>
-                    <li>
-                        <label class="dropdown-item">
-                            <input type="checkbox" class="toggle-column" data-column="paid" checked> Paid
-                        </label>
-                    </li>
-                    <li>
-                        <label class="dropdown-item">
-                            <input type="checkbox" class="toggle-column" data-column="actions" checked> Actions
-                        </label>
-                    </li>
-                </ul>
-            </div>
+        <div class="col-12 d-flex justify-content-between align-items-center">
+            {% if subscription.is_paid %}
+                <div class="dropdown">
+                    <button class="btn btn-secondary dropdown-toggle" type="button" id="manageColumnsDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                        Manage Columns
+                    </button>
+                    <ul class="dropdown-menu" aria-labelledby="manageColumnsDropdown">
+                        <li>
+                            <label class="dropdown-item">
+                                <input type="checkbox" class="toggle-column" data-column="date" checked> Date
+                            </label>
+                        </li>
+                        <li>
+                            <label class="dropdown-item">
+                                <input type="checkbox" class="toggle-column" data-column="buying_group" checked> Buying Group
+                            </label>
+                        </li>
+                        <li>
+                            <label class="dropdown-item">
+                                <input type="checkbox" class="toggle-column" data-column="account" checked> Account
+                            </label>
+                        </li>
+                        <li>
+                            <label class="dropdown-item">
+                                <input type="checkbox" class="toggle-column" data-column="order_number" checked> Order Number
+                            </label>
+                        </li>
+                        <li>
+                            <label class="dropdown-item">
+                                <input type="checkbox" class="toggle-column" data-column="tracking_number" checked> Tracking Number
+                            </label>
+                        </li>
+                        <li>
+                            <label class="dropdown-item">
+                                <input type="checkbox" class="toggle-column" data-column="product" checked> Product
+                            </label>
+                        </li>
+                        <li>
+                            <label class="dropdown-item">
+                                <input type="checkbox" class="toggle-column" data-column="merchant" checked> Merchant
+                            </label>
+                        </li>
+                        <li>
+                            <label class="dropdown-item">
+                                <input type="checkbox" class="toggle-column" data-column="card" checked> Card
+                            </label>
+                        </li>
+                        <li>
+                            <label class="dropdown-item">
+                                <input type="checkbox" class="toggle-column" data-column="cost" checked> Cost
+                            </label>
+                        </li>
+                        <li>
+                            <label class="dropdown-item">
+                                <input type="checkbox" class="toggle-column" data-column="reimbursed" checked> Reimbursed
+                            </label>
+                        </li>
+                        <li>
+                            <label class="dropdown-item">
+                                <input type="checkbox" class="toggle-column" data-column="cash_back" checked> Cash Back
+                            </label>
+                        </li>
+                        <li>
+                            <label class="dropdown-item">
+                                <input type="checkbox" class="toggle-column" data-column="paid" checked> Paid
+                            </label>
+                        </li>
+                        <li>
+                            <label class="dropdown-item">
+                                <input type="checkbox" class="toggle-column" data-column="actions" checked> Actions
+                            </label>
+                        </li>
+                    </ul>
+                </div>
+                <a href="{% url 'export_orders_csv' %}" class="btn btn-success">Export to CSV</a>
+            {% else %}
+                <div></div> <!-- Empty div to maintain flex layout -->
+                <a href="{% url 'pricing' %}" class="btn btn-outline-primary">Upgrade to Export</a>
+            {% endif %}
         </div>
     </div>
+
+    <!-- Optional: Feedback for Free Users -->
+    {% if not subscription.is_paid %}
+        <div class="alert alert-info mt-3">
+            <a href="{% url 'pricing' %}" class="alert-link">Upgrade your plan</a> to access premium features like "Manage Columns" and "Export to CSV".
+        </div>
+    {% endif %}
+
     <div class="row">
         <div class="col-12">
             <h2 class="mt-4">Your Orders</h2>

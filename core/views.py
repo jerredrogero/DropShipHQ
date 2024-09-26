@@ -39,6 +39,10 @@ from django.views.generic import TemplateView
 from .decorators import check_subscription, subscription_required
 from .mixins import SubscriptionRequiredMixin
 from dateutil.relativedelta import relativedelta
+import csv
+from django.http import HttpResponse
+from django.contrib.auth.decorators import login_required
+from .models import Order
 
 logger = logging.getLogger(__name__)
 stripe.api_key = django_settings.STRIPE_SECRET_KEY
@@ -222,7 +226,6 @@ def dashboard(request):
         'subscription': subscription,
         'orders_left': subscription.orders_left(),
         'days_until_refresh': subscription.days_until_refresh() or 0,
-        'debug': django_settings.DEBUG,
     }
 
     return render(request, 'core/dashboard.html', context)
@@ -782,3 +785,39 @@ class TermsOfServiceView(TemplateView):
 
 class PrivacyPolicyView(TemplateView):
     template_name = 'core/privacy_policy.html'
+
+@login_required
+def export_orders_csv(request):
+    subscription = Subscription.objects.get(user=request.user)
+    if not subscription.is_paid():
+        return HttpResponse('Unauthorized', status=401)
+
+    orders = Order.objects.filter(user=request.user)
+
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = 'attachment; filename="orders.csv"'
+
+    writer = csv.writer(response)
+    writer.writerow([
+        'Date', 'Buying Group', 'Account', 'Order Number',
+        'Tracking Number', 'Product', 'Merchant', 'Card',
+        'Cost', 'Reimbursed', 'Cash Back', 'Paid'
+    ])
+
+    for order in orders:
+        writer.writerow([
+            order.date,
+            order.buying_group.name if order.buying_group else '',
+            order.account,
+            order.order_number,
+            order.tracking_number,
+            order.product,
+            order.merchant,
+            order.card,
+            order.cost,
+            order.reimbursed,
+            order.cash_back,
+            order.paid
+        ])
+
+    return response
