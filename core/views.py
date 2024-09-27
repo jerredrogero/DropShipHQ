@@ -625,7 +625,6 @@ def upgrade_plan(request, plan):
         return JsonResponse({'error': 'Authentication required.'}, status=401)
     
     try:
-        # Determine if we're in test or live mode
         is_test_mode = django_settings.STRIPE_SECRET_KEY.startswith('sk_test_')
         logger.info(f"Is test mode: {is_test_mode}")
         
@@ -640,6 +639,7 @@ def upgrade_plan(request, plan):
         }
 
         if plan not in price_id_map:
+            logger.error(f"Invalid plan selected: {plan}")
             return JsonResponse({'error': 'Invalid plan selected.'}, status=400)
         
         price_id = price_id_map[plan]

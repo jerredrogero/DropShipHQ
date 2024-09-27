@@ -52,7 +52,7 @@
                             <ul class="list-group list-group-flush mb-4">
                                 <li class="list-group-item">Up to 50 orders/month</li>
                                 <li class="list-group-item">Full dashboard access</li>
-                                <li class="list-group-item">Manage Columns</li>
+                                <li class="list-group-item">Manage Dashboard</li>
                                 <li class="list-group-item">Export to CSV</li>
                             </ul>
                             <button id="checkout-button-starter" class="btn btn-primary mt-auto">Get Started</button>
@@ -135,7 +135,7 @@
                             <ul class="list-group list-group-flush mb-4">
                                 <li class="list-group-item">Up to 50 orders/month</li>
                                 <li class="list-group-item">Full dashboard access</li>
-                                <li class="list-group-item">Manage Columns</li>
+                                <li class="list-group-item">Manage Dashboard</li>
                                 <li class="list-group-item">Export to CSV</li>
                             </ul>
                             <button id="checkout-button-starter-yearly" class="btn btn-primary mt-auto">Get Started</button>
@@ -225,7 +225,7 @@
                         <td><i class="fas fa-check text-success"></i></td>
                     </tr>
                     <tr>
-                        <td>Manage Columns</td>
+                        <td>Manage Dashboard</td>
                         <td><i class="fas fa-times text-danger"></i></td>
                         <td><i class="fas fa-check text-success"></i></td>
                         <td><i class="fas fa-check text-success"></i></td>
@@ -233,6 +233,13 @@
                     </tr>
                     <tr>
                         <td>Export to CSV</td>
+                        <td><i class="fas fa-times text-danger"></i></td>
+                        <td><i class="fas fa-check text-success"></i></td>
+                        <td><i class="fas fa-check text-success"></i></td>
+                        <td><i class="fas fa-check text-success"></i></td>
+                    </tr>
+                    <tr>
+                        <td>Import from CSV</td>
                         <td><i class="fas fa-times text-danger"></i></td>
                         <td><i class="fas fa-check text-success"></i></td>
                         <td><i class="fas fa-check text-success"></i></td>
@@ -263,15 +270,23 @@
     </div>
 </div>
 
+<div id="loading-spinner" class="d-none">
+    <div class="spinner-border text-primary" role="status">
+        <span class="visually-hidden">Loading...</span>
+    </div>
+</div>
+
 <script src="https://js.stripe.com/v3/"></script>
 <script>
     const stripe = Stripe('{{ STRIPE_PUBLISHABLE_KEY }}');
 
     // Function to handle Stripe Checkout redirection
     function handleCheckout(plan) {
-        document.getElementById('loading-spinner').style.display = 'block';
+        const spinner = document.getElementById('loading-spinner');
+        if (spinner) {
+            spinner.classList.remove('d-none');
+        }
         
-        // Construct the URL dynamically using JavaScript
         const upgradeUrl = `/upgrade/${plan}/`;
 
         fetch(upgradeUrl, {
@@ -283,22 +298,25 @@
             body: JSON.stringify({})
         })
         .then(function (response) {
-            document.getElementById('loading-spinner').style.display = 'none';
+            if (spinner) {
+                spinner.classList.add('d-none');
+            }
             if (!response.ok) {
-                return response.json().then(errData => { throw new Error(errData.error) })
+                return response.json().then(errData => { throw new Error(errData.error) });
             }
             return response.json();
         })
         .then(function (data) {
-            return stripe.redirectToCheckout({ sessionId: data.sessionId });
-        })
-        .then(function (result) {
-            if (result.error) {
-                alert(result.error.message);
+            if (data.sessionId) {
+                return stripe.redirectToCheckout({ sessionId: data.sessionId });
+            } else {
+                throw new Error('No session ID received from the server');
             }
         })
         .catch(function (error) {
-            document.getElementById('loading-spinner').style.display = 'none';
+            if (spinner) {
+                spinner.classList.add('d-none');
+            }
             console.error('Error:', error);
             alert(error.message || 'An unexpected error occurred. Please try again.');
         });
