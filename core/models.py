@@ -21,7 +21,7 @@ def create_or_update_user_profile(sender, instance, created, **kwargs):
     if created:
         UserProfile.objects.create(user=instance)
         # Create a default subscription for the user
-        Subscription.objects.create(user=instance)
+        Subscription.objects.create(user=instance, plan='FREE')
     else:
         # Use get_or_create to handle cases where UserProfile or Subscription might not exist yet
         profile, _ = UserProfile.objects.get_or_create(user=instance)
@@ -121,13 +121,14 @@ class APIKey(models.Model):
 
 class Subscription(models.Model):
     PLAN_CHOICES = [
+        ('FREE', 'Free'),
         ('STARTER', 'Starter'),
         ('PRO', 'Pro'),
         ('PREMIUM', 'Premium'),
         ('ENTERPRISE', 'Enterprise'),
     ]
-    user = models.OneToOneField(User, on_delete=models.CASCADE)
-    plan = models.CharField(max_length=20, choices=PLAN_CHOICES)
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='subscription')
+    plan = models.CharField(max_length=20, choices=PLAN_CHOICES, default='FREE')
     order_count = models.IntegerField(default=0)
     next_refresh_date = models.DateTimeField(null=True, blank=True)
     status = models.CharField(max_length=20, default='active')
