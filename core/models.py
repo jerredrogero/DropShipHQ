@@ -121,39 +121,17 @@ class APIKey(models.Model):
 
 class Subscription(models.Model):
     PLAN_CHOICES = [
-        ('FREE', 'Free'),
         ('STARTER', 'Starter'),
         ('PRO', 'Pro'),
         ('PREMIUM', 'Premium'),
         ('ENTERPRISE', 'Enterprise'),
     ]
-    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='subscription')
-    plan = models.CharField(max_length=20, choices=PLAN_CHOICES, default='FREE')
-    status = models.CharField(max_length=20, choices=[('active', 'Active'), ('inactive', 'Inactive')], default='active')
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    plan = models.CharField(max_length=20, choices=PLAN_CHOICES)
     order_count = models.IntegerField(default=0)
-    stripe_subscription_id = models.CharField(max_length=255, null=True, blank=True)
-    subscription_start_date = models.DateTimeField(default=timezone.now)
     next_refresh_date = models.DateTimeField(null=True, blank=True)
-
-    def get_plan_display(self):
-        return dict(self.PLAN_CHOICES)[self.plan]
-
-    def get_order_limit(self):
-        limits = {
-            'FREE': 10,
-            'STARTER': 50,
-            'PRO': 150,
-            'PREMIUM': 300,
-            'ENTERPRISE': 'Unlimited'
-        }
-        return limits[self.plan]
-
-    def can_create_order(self):
-        self.refresh_order_limit()
-        limit = self.get_order_limit()
-        if limit == 'Unlimited':
-            return True
-        return self.order_count < limit
+    status = models.CharField(max_length=20, default='active')
+    stripe_subscription_id = models.CharField(max_length=50, unique=True, null=True, blank=True)
 
     def increment_order_count(self):
         self.order_count += 1
@@ -195,3 +173,12 @@ class Subscription(models.Model):
 
     def is_paid(self):
         return self.plan in ['STARTER', 'PRO', 'PREMIUM', 'ENTERPRISE']
+
+    def get_order_limit(self):
+        PLAN_LIMITS = {
+            'STARTER': 10,
+            'PRO': 50,
+            'PREMIUM': 100,
+            'ENTERPRISE': 'Unlimited',
+        }
+        return PLAN_LIMITS.get(self.plan, 0)

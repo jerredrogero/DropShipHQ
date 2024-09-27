@@ -132,6 +132,12 @@ class CustomPasswordResetCompleteView(auth_views.PasswordResetCompleteView):
 
 @login_required
 def dashboard(request):
+    # Retrieve user's subscription
+    subscription, created = Subscription.objects.get_or_create(user=request.user)
+    
+    # Refresh order limits if necessary
+    subscription.refresh_order_limit()
+    
     # Get date range and search query from request parameters
     start_date = request.GET.get('start_date')
     end_date = request.GET.get('end_date')
@@ -176,12 +182,6 @@ def dashboard(request):
         summary['total_reimbursed'] - summary['total_cost'] + summary['total_cash_back']
     )
 
-    subscription, created = Subscription.objects.get_or_create(user=request.user)
-    
-    if created or not subscription.next_refresh_date:
-        subscription.next_refresh_date = timezone.now() + relativedelta(months=1)
-        subscription.save()
-    
     # Handle form submission for adding new order
     if request.method == 'POST':
         form = OrderForm(request.POST, user=request.user)
@@ -256,11 +256,16 @@ def delete_order(request, order_id):
 @login_required
 @require_POST
 def update_paid_status(request, order_id):
-    order = get_object_or_404(Order, id=order_id, user=request.user)
-    paid = request.POST.get('paid') == 'true'
-    order.paid = paid
-    order.save()
-    return JsonResponse({'success': True})
+    try:
+        order = Order.objects.get(id=order_id, user=request.user)
+        paid_status = request.POST.get('paid') in ['true', '1']
+        order.paid = paid_status
+        order.save()
+        return JsonResponse({'success': True})
+    except Order.DoesNotExist:
+        return JsonResponse({'success': False, 'errors': 'Order not found.'}, status=404)
+    except Exception as e:
+        return JsonResponse({'success': False, 'errors': str(e)}, status=500)
 
 @require_http_methods(["GET", "POST"])
 def logout_view(request):
