@@ -232,7 +232,7 @@
         <div class="col-12">
             <h2 class="mt-4">Your Orders</h2>
             <div class="table-responsive">
-                <table class="table table-striped" id="ordersTable">
+                <table class="table" id="ordersTable">
                     <thead>
                         <tr>
                             <th data-field="date">Date</th>
@@ -252,8 +252,10 @@
                     </thead>
                     <tbody>
                         {% for order in orders %}
-                        <tr id="order-{{ order.id }}" class="{% if order.paid %}table-success{% endif %}">
-                            <td data-field="date"><input type="date" class="editable form-control" data-field="date" value="{{ order.date|date:'Y-m-d' }}" disabled></td>
+                        <tr id="order-{{ order.id }}" class="{% if order.paid %}table-success{% else %}grey-background{% endif %}">
+                            <td data-field="date">
+                                <input type="date" class="editable form-control" data-field="date" value="{{ order.date|date:'Y-m-d' }}" disabled>
+                            </td>
                             <td data-field="buying_group">
                                 <select class="editable form-control" data-field="buying_group" disabled>
                                     <option value="">---------</option>
@@ -270,9 +272,15 @@
                                     {% endfor %}
                                 </select>
                             </td>
-                            <td data-field="order_number"><input type="text" class="editable form-control" data-field="order_number" value="{{ order.order_number }}" disabled></td>
-                            <td data-field="tracking_number"><input type="text" class="editable form-control" data-field="tracking_number" value="{{ order.tracking_number }}" disabled></td>
-                            <td data-field="product"><input type="text" class="editable form-control" data-field="product" value="{{ order.product }}" disabled></td>
+                            <td data-field="order_number">
+                                <input type="text" class="editable form-control" data-field="order_number" value="{{ order.order_number }}" disabled>
+                            </td>
+                            <td data-field="tracking_number">
+                                <input type="text" class="editable form-control" data-field="tracking_number" value="{{ order.tracking_number }}" disabled>
+                            </td>
+                            <td data-field="product">
+                                <input type="text" class="editable form-control" data-field="product" value="{{ order.product }}" disabled>
+                            </td>
                             <td data-field="merchant">
                                 <select class="editable form-control" data-field="merchant" disabled>
                                     <option value="">---------</option>
@@ -289,9 +297,15 @@
                                     {% endfor %}
                                 </select>
                             </td>
-                            <td data-field="cost"><input type="number" step="0.01" class="editable form-control" data-field="cost" value="{{ order.cost }}" disabled></td>
-                            <td data-field="reimbursed"><input type="number" step="0.01" class="editable form-control" data-field="reimbursed" value="{{ order.reimbursed }}" disabled></td>
-                            <td data-field="cash_back"><input type="number" step="0.01" class="editable form-control" data-field="cash_back" value="{{ order.cash_back }}" disabled></td>
+                            <td data-field="cost">
+                                <input type="number" step="0.01" class="editable form-control" data-field="cost" value="{{ order.cost }}" disabled>
+                            </td>
+                            <td data-field="reimbursed">
+                                <input type="number" step="0.01" class="editable form-control" data-field="reimbursed" value="{{ order.reimbursed }}" disabled>
+                            </td>
+                            <td data-field="cash_back">
+                                <input type="number" step="0.01" class="editable form-control" data-field="cash_back" value="{{ order.cash_back }}" disabled>
+                            </td>
                             <td data-field="paid">
                                 <input type="checkbox" class="paid-checkbox" data-order-id="{{ order.id }}" {% if order.paid %}checked{% endif %}>
                             </td>
@@ -532,16 +546,14 @@ $(document).ready(function() {
         }
     });
 
-    // Add this to your existing JavaScript code
-    $(document).on('change', '.paid-checkbox', function() {
+    // Update paid status
+    $('.paid-checkbox').change(function() {
         var orderId = $(this).data('order-id');
-        var isPaid = $(this).prop('checked');
-        console.log('Checkbox changed for order:', orderId, 'isPaid:', isPaid);
+        var isPaid = $(this).is(':checked');
         updatePaidStatus(orderId, isPaid);
     });
 
     function updatePaidStatus(orderId, isPaid) {
-        console.log('Updating paid status for order:', orderId, 'isPaid:', isPaid);
         $.ajax({
             url: '/update-paid-status/' + orderId + '/',
             method: 'POST',
@@ -550,12 +562,11 @@ $(document).ready(function() {
             },
             headers: {'X-CSRFToken': '{{ csrf_token }}'},
             success: function(response) {
-                console.log('AJAX success:', response);
                 if (response.success) {
                     var $row = $('#order-' + orderId);
-                    console.log('Row before class change:', $row.attr('class'));
-                    $row.toggleClass('table-success', isPaid);
-                    console.log('Row after class change:', $row.attr('class'));
+                    $row.removeClass('grey-background table-success');
+                    $row.addClass(isPaid ? 'table-success' : 'grey-background');
+                    console.log('Updated class for order ' + orderId + ': ' + (isPaid ? 'table-success' : 'grey-background'));
                     showToast('Order paid status updated', 'success');
                 } else {
                     showToast('Error updating paid status: ' + JSON.stringify(response.errors), 'error');
@@ -563,7 +574,6 @@ $(document).ready(function() {
                 }
             },
             error: function(xhr, status, error) {
-                console.log('AJAX error:', error);
                 showToast('Error updating paid status: ' + error, 'error');
                 $('#order-' + orderId + ' .paid-checkbox').prop('checked', !isPaid);
             }

@@ -140,16 +140,16 @@ class Subscription(models.Model):
 
     def get_order_limit(self):
         limits = {
-            'FREE': 5,
-            'STARTER': 50,  # Updated from 30 to 50
-            'PRO': 200,      # Updated from 100 to 200
-            'PREMIUM': 500,
+            'FREE': 10,
+            'STARTER': 50,
+            'PRO': 150,
+            'PREMIUM': 300,
             'ENTERPRISE': 'Unlimited'
         }
         return limits[self.plan]
 
     def can_create_order(self):
-        self.refresh_order_limit()  # Check and refresh if needed
+        self.refresh_order_limit()
         limit = self.get_order_limit()
         if limit == 'Unlimited':
             return True

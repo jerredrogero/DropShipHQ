@@ -326,3 +326,30 @@ footer {
 .hidden-column {
     display: none;
 }
+
+.btn-success {
+    /* Customize your button styles */
+    background-color: #28a745;
+    border-color: #28a745;
+}
+
+.btn-success:hover {
+    background-color: #218838;
+    border-color: #1e7e34;
+}
+
+.grey-background td {
+    background-color: #f0f0f0 !important; /* Ensure this overrides other styles */
+}
+
+.table-success td {
+    background-color: #d4edda !important; /* Bootstrap's green */
+}
+
+.table-secondary td {
+    background-color: #f8f9fa !important; /* Default light grey */
+}
+
+.table td {
+    background-color: transparent; /* Allow parent <tr> to control background */
+}
