@@ -172,13 +172,20 @@ class Subscription(models.Model):
         return max(0, days)
 
     def is_paid(self):
-        return self.plan in ['STARTER', 'PRO', 'PREMIUM', 'ENTERPRISE']
+        return self.plan in ['FREE', 'STARTER', 'PRO', 'PREMIUM', 'ENTERPRISE']
 
     def get_order_limit(self):
         PLAN_LIMITS = {
-            'STARTER': 10,
-            'PRO': 50,
-            'PREMIUM': 100,
+            'FREE': 10,
+            'STARTER': 50,
+            'PRO': 150,
+            'PREMIUM': 300,
             'ENTERPRISE': 'Unlimited',
         }
         return PLAN_LIMITS.get(self.plan, 0)
+
+    def can_create_order(self):
+        limit = self.get_order_limit()
+        if limit == 'Unlimited':
+            return True
+        return self.order_count < limit
