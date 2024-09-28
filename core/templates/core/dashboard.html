@@ -95,9 +95,9 @@
                         {% if days_until_refresh == 0 %}
                             Your order limit will refresh today.
                         {% elif days_until_refresh is not None %}
-                            Days until next refresh: {{ days_until_refresh }}
+                            Days until next order refresh: {{ days_until_refresh }}
                         {% else %}
-                            Next refresh date not set.
+                            Next order refresh date not set.
                         {% endif %}
                     </div>
                     {% if form %}
@@ -219,9 +219,6 @@
                     </ul>
                 </div>
                 <a href="{% url 'export_orders_csv' %}" class="btn btn-success">Export to CSV</a>
-            {% else %}
-                <div></div> <!-- Empty div to maintain flex layout -->
-                <a href="{% url 'pricing' %}" class="btn btn-outline-primary">Upgrade to Export Orders</a>
             {% endif %}
         </div>
     </div>
