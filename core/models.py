@@ -75,17 +75,24 @@ class Order(models.Model):
     def __str__(self):
         return f"Order {self.order_number} by {self.user.username}"
 
-    @property
-    def commission(self):
-        return self.reimbursed - self.cost
-
-    @property
-    def total_profit(self):
-        return (self.cash_back / 100 * self.cost) + self.commission
+    def calculate_total_profit(self):
+        if not self.cost or not self.reimbursed or not self.cash_back:
+            return 0
+        return (self.cash_back / 100 * self.cost) + (self.reimbursed - self.cost)
 
     @classmethod
     def order_number_exists(cls, user, order_number):
         return cls.objects.filter(user=user, order_number=order_number).exists()
+
+    def save(self, *args, **kwargs):
+        # Ensure values are not None
+        cash_back = self.cash_back if self.cash_back is not None else 0
+        cost = self.cost if self.cost is not None else 0
+        reimbursed = self.reimbursed if self.reimbursed is not None else 0
+
+        # Calculate net gain and total profit
+        self.net_gain = reimbursed - cost + (cash_back / 100 * cost)
+        super().save(*args, **kwargs)
 
 @receiver(post_save, sender=Order)
 def update_subscription_order_count_on_save(sender, instance, created, **kwargs):

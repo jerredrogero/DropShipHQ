@@ -208,6 +208,11 @@
                         </li>
                         <li>
                             <label class="dropdown-item">
+                                <input type="checkbox" class="toggle-column" data-column="total_profit" checked> Total Profit
+                            </label>
+                        </li>
+                        <li>
+                            <label class="dropdown-item">
                                 <input type="checkbox" class="toggle-column" data-column="paid" checked> Paid
                             </label>
                         </li>
@@ -242,6 +247,7 @@
                             <th data-field="cost">Cost</th>
                             <th data-field="reimbursed">Reimbursed</th>
                             <th data-field="cash_back">Cash Back</th>
+                            <th data-field="total_profit">Total Profit</th>
                             <th data-field="paid">Paid</th>
                             <th data-field="actions">Actions</th>
                         </tr>
@@ -301,6 +307,11 @@
                             </td>
                             <td data-field="cash_back">
                                 <input type="number" step="0.01" class="editable form-control" data-field="cash_back" value="{{ order.cash_back }}" disabled>
+                            </td>
+                            <td data-field="total_profit">
+                                <div class="input-group">
+                                    <input type="number" step="0.01" class="form-control" value="{{ order.calculated_profit|floatformat:2|default:'0.00' }}" disabled>
+                                </div>
                             </td>
                             <td data-field="paid">
                                 <input type="checkbox" class="paid-checkbox" data-order-id="{{ order.id }}" {% if order.paid %}checked{% endif %}>

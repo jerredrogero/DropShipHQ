@@ -43,6 +43,7 @@ import csv
 from django.http import HttpResponse
 from django.contrib.auth.decorators import login_required
 from .models import Order
+from django.db.models import ExpressionWrapper, Value
 
 logger = logging.getLogger(__name__)
 stripe.api_key = django_settings.STRIPE_SECRET_KEY
@@ -152,6 +153,25 @@ def dashboard(request):
         end_date = datetime.strptime(end_date, '%Y-%m-%d').date()
         orders = orders.filter(date__range=[start_date, end_date])
 
+    # Fix the profit calculation
+    orders = orders.annotate(
+        calculated_profit=ExpressionWrapper(
+            F('reimbursed') - F('cost') + 
+            (F('cash_back') * F('cost') / Value(Decimal('100.0'))),
+            output_field=DecimalField(max_digits=10, decimal_places=2)
+        )
+    )
+
+    # Debug print to verify
+    for order in orders:
+        print(f"""
+        Order ID: {order.id}
+        Cost: {order.cost}
+        Reimbursed: {order.reimbursed}
+        Cash Back: {order.cash_back}
+        Calculated Profit: {order.calculated_profit}
+        """)
+
     # Apply search filtering
     if search_query:
         orders = orders.filter(
@@ -208,12 +228,7 @@ def dashboard(request):
     cards = Card.objects.filter(user=request.user)
 
     context = {
-        'orders': orders.values(
-            'id', 'date', 'buying_group__name', 'account__name', 'order_number', 
-            'tracking_number', 'product', 'merchant__name', 'card__name', 
-            'cost', 'reimbursed', 'cash_back', 'paid',
-            'buying_group_id', 'account_id', 'merchant_id', 'card_id'
-        ),
+        'orders': orders,
         'summary': summary,
         'form': form,
         'buying_groups': buying_groups,
