@@ -262,8 +262,10 @@
                     <tbody>
                         {% for order in orders %}
                         <tr id="order-{{ order.id }}" class="{% if order.paid %}table-success{% else %}grey-background{% endif %}">
-                            <td data-field="date">
-                                <input type="date" class="editable form-control" data-field="date" value="{{ order.date|date:'Y-m-d' }}" disabled>
+                            <td>
+                                <span class="editable" data-field="date" data-order-id="{{ order.id }}">
+                                    {{ order.date|date:"m/d/Y" }}
+                                </span>
                             </td>
                             <td data-field="buying_group">
                                 <select class="editable form-control" data-field="buying_group" disabled>
@@ -282,7 +284,9 @@
                                 </select>
                             </td>
                             <td data-field="order_number">
-                                {{ order.order_number|safe }}
+                                {% autoescape off %}
+                                <a href="https://www.amazon.com/gp/your-account/order-details?orderID={{ order.order_number }}" target="_blank">{{ order.order_number }}</a>
+                                {% endautoescape %}
                             </td>
                             <td data-field="tracking_number">
                                 <input type="text" class="editable form-control" data-field="tracking_number" value="{{ order.tracking_number }}" disabled>
@@ -508,7 +512,18 @@ $(document).ready(function() {
             row.addClass('edit-mode');
             
             // Make fields editable
-            row.find('.editable').prop('disabled', false);
+            row.find('.editable').each(function() {
+                var field = $(this).data('field');
+                if (field === 'date') {
+                    // Convert MM/DD/YYYY to YYYY-MM-DD for date input
+                    var dateText = $(this).text().trim();
+                    var [month, day, year] = dateText.split('/');
+                    var isoDate = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+                    $(this).html(`<input type="date" class="form-control form-control-sm" value="${isoDate}">`);
+                } else {
+                    $(this).prop('disabled', false);
+                }
+            });
             
             // Change button text
             $(this).text('Save');
@@ -549,10 +564,28 @@ $(document).ready(function() {
     function saveOrder(orderId) {
         var row = $('#order-' + orderId);
         var data = {};
+        
+        // Get order number and its HTML structure
+        var orderNumberCell = row.find('td[data-field="order_number"]');
+        var orderNumber = orderNumberCell.text().trim();
+        data['order_number'] = orderNumber;
+        
+        // Store date HTML structure
+        var dateCell = row.find('span[data-field="date"]');
+        var dateInput = dateCell.find('input');
+        var dateValue = dateInput.val();
+        data['date'] = dateValue;
+        
+        // Then collect all editable fields
         row.find('.editable').each(function() {
             var field = $(this).data('field');
-            var value = $(this).val();
-            data[field] = value;
+            if (field === 'date') {
+                return; // Skip date as we already handled it
+            } else if ($(this).is('select')) {
+                data[field] = $(this).val();
+            } else if ($(this).is('input')) {
+                data[field] = $(this).val();
+            }
         });
 
         $.ajax({
@@ -562,11 +595,16 @@ $(document).ready(function() {
             headers: {'X-CSRFToken': '{{ csrf_token }}'},
             success: function(response) {
                 if (response.success) {
+                    // Format and restore the date
+                    var date = new Date(dateValue);
+                    var displayDate = `${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getDate().toString().padStart(2, '0')}/${date.getFullYear()}`;
+                    dateCell.html(displayDate);
+                    
+                    // Restore order number with link
+                    orderNumberCell.html(`<a href="https://www.amazon.com/gp/your-account/order-details?orderID=${orderNumber}" target="_blank">${orderNumber}</a>`);
+                    
                     showToast('Order updated successfully', 'success');
-                    // Refresh the page after a short delay
-                    setTimeout(function() {
-                        location.reload();
-                    }, 1000); // 1000 milliseconds = 1 second
+                    exitEditMode(orderId);
                 } else {
                     showToast('Error saving order: ' + JSON.stringify(response.errors), 'error');
                 }
