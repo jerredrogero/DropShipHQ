@@ -44,6 +44,7 @@ from django.http import HttpResponse
 from django.contrib.auth.decorators import login_required
 from .models import Order
 from django.db.models import ExpressionWrapper, Value
+from core.utils.amazon_import import import_amazon_orders
 
 logger = logging.getLogger(__name__)
 stripe.api_key = django_settings.STRIPE_SECRET_KEY
@@ -133,6 +134,9 @@ class CustomPasswordResetCompleteView(auth_views.PasswordResetCompleteView):
 
 @login_required
 def dashboard(request):
+    current_year = datetime.now().year
+    years = range(current_year, current_year - 5, -1)  # Last 5 years
+    
     # Retrieve user's subscription
     subscription, created = Subscription.objects.get_or_create(user=request.user)
     
@@ -241,6 +245,7 @@ def dashboard(request):
         'subscription': subscription,
         'orders_left': subscription.orders_left(),
         'days_until_refresh': subscription.days_until_refresh() or 0,
+        'years': years,
     }
 
     return render(request, 'core/dashboard.html', context)
@@ -841,3 +846,41 @@ def export_orders_csv(request):
         ])
 
     return response
+
+@login_required
+@subscription_required(['PRO', 'PREMIUM'])
+def sync_amazon_orders(request):
+    if request.method == 'POST':
+        try:
+            email = request.POST.get('amazon_email')
+            password = request.POST.get('amazon_password')
+            
+            result = import_amazon_orders(
+                user=request.user,
+                email=email,
+                password=password
+            )
+            
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                if result.get('success'):
+                    messages.success(
+                        request, 
+                        f'Successfully imported {result["imported"]} new orders. Skipped {result["skipped"]} existing orders.'
+                    )
+                    return JsonResponse({
+                        'success': True,
+                        'redirect': reverse('dashboard')
+                    })
+                else:
+                    return JsonResponse({
+                        'success': False,
+                        'error': str(result.get('error', 'Unknown error occurred'))
+                    })
+                    
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'error': str(e)
+            })
+            
+    return redirect('dashboard')

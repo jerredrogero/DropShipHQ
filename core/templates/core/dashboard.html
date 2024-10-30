@@ -223,7 +223,14 @@
                         </li>
                     </ul>
                 </div>
-                <a href="{% url 'export_orders_csv' %}" class="btn btn-success">Export to CSV</a>
+                <div class="mb-3">
+                    <a href="{% url 'export_orders_csv' %}" class="btn btn-success">Export to CSV</a>
+                    {% if user.subscription.plan in 'PRO,PREMIUM' %}
+                        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#amazonSyncModal">
+                            <i class="fas fa-sync"></i> Sync Amazon Orders
+                        </button>
+                    {% endif %}
+                </div>
             {% endif %}
         </div>
     </div>
@@ -275,7 +282,7 @@
                                 </select>
                             </td>
                             <td data-field="order_number">
-                                <input type="text" class="editable form-control" data-field="order_number" value="{{ order.order_number }}" disabled>
+                                {{ order.order_number|safe }}
                             </td>
                             <td data-field="tracking_number">
                                 <input type="text" class="editable form-control" data-field="tracking_number" value="{{ order.tracking_number }}" disabled>
@@ -328,6 +335,46 @@
         </div>
     </div>
 </div>
+
+{% if user.subscription.plan in 'PRO,PREMIUM' %}
+    <!-- Amazon Sync Modal -->
+    <div class="modal fade" id="amazonSyncModal" tabindex="-1" aria-labelledby="amazonSyncModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form method="post" action="{% url 'sync_amazon_orders' %}" id="amazonSyncForm">
+                    {% csrf_token %}
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="amazonSyncModalLabel">Sync Amazon Orders</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div id="loginSection">
+                            <div class="mb-3">
+                                <label for="amazon_email" class="form-label">Amazon Email</label>
+                                <input type="email" class="form-control" id="amazon_email" name="amazon_email" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="amazon_password" class="form-label">Amazon Password</label>
+                                <input type="password" class="form-control" id="amazon_password" name="amazon_password" required>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                        <button type="submit" class="btn btn-primary" id="syncButton">
+                            <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
+                            <span class="button-text">Sync Orders</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+{% endif %}
+
+<div id="messageData" 
+    data-has-error="{% if messages %}{% for message in messages %}{% if message.tags == 'error' %}true{% endif %}{% endfor %}{% endif %}"
+></div>
 
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
@@ -590,6 +637,84 @@ $(document).ready(function() {
     $('.table td').each(function() {
         if(this.offsetWidth < this.scrollWidth && !$(this).attr('title')) {
             $(this).attr('title', $(this).text());
+        }
+    });
+});
+</script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('amazonSyncForm');
+    const loginSection = document.getElementById('loginSection');
+    const otpSection = document.getElementById('otpSection');
+    const otpMessage = document.getElementById('otpMessage');
+    const syncButton = document.getElementById('syncButton');
+    const buttonText = syncButton.querySelector('.button-text');
+    const spinner = syncButton.querySelector('.spinner-border');
+    
+    // Function to toggle required fields based on visible section
+    function updateRequiredFields() {
+        // Login fields
+        document.getElementById('amazon_email').required = loginSection.style.display !== 'none';
+        document.getElementById('amazon_password').required = loginSection.style.display !== 'none';
+        
+        // OTP field
+        const otpInput = document.getElementById('amazon_otp');
+        if (otpInput) otpInput.required = otpSection.style.display !== 'none';
+    }
+    
+    form.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        console.log('Form submitted');
+        
+        // Update required fields before submission
+        updateRequiredFields();
+        
+        // Show loading state
+        syncButton.disabled = true;
+        spinner.classList.remove('d-none');
+        
+        const formData = new FormData(form);
+        
+        try {
+            const response = await fetch(form.action, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            });
+            
+            const data = await response.json();
+            console.log('Response:', data);
+            
+            if (data.needs_otp) {
+                loginSection.style.display = 'none';
+                otpSection.style.display = 'block';
+                otpMessage.textContent = data.message;
+                buttonText.textContent = 'Submit Code';
+                updateRequiredFields();
+            } else if (data.success) {
+                const modal = bootstrap.Modal.getInstance(document.getElementById('amazonSyncModal'));
+                modal.hide();
+                document.querySelector('.modal-backdrop')?.remove();
+                document.body.classList.remove('modal-open');
+                document.body.style.overflow = '';
+                document.body.style.paddingRight = '';
+                
+                window.location.href = data.redirect;
+            } else if (data.error) {
+                console.error('Error from server:', data.error);
+                alert(data.error);
+            } else {
+                alert('An unknown error occurred');
+            }
+        } catch (error) {
+            console.error('Fetch error:', error);
+            alert('An error occurred. Please try again.');
+        } finally {
+            syncButton.disabled = false;
+            spinner.classList.add('d-none');
         }
     });
 });
