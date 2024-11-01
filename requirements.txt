@@ -1,4 +1,4 @@
-amazon-orders==2.0.1
+amazon-orders==2.0.3
 amazoncaptcha==0.5.11
 amqp==5.2.0
 asgiref==3.8.1

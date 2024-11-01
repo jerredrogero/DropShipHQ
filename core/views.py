@@ -45,6 +45,7 @@ from django.contrib.auth.decorators import login_required
 from .models import Order
 from django.db.models import ExpressionWrapper, Value
 from core.utils.amazon_import import import_amazon_orders
+from django.conf import settings
 
 logger = logging.getLogger(__name__)
 stripe.api_key = django_settings.STRIPE_SECRET_KEY
@@ -246,6 +247,7 @@ def dashboard(request):
         'orders_left': subscription.orders_left(),
         'days_until_refresh': subscription.days_until_refresh() or 0,
         'years': years,
+        'debug': settings.DEBUG,
     }
 
     return render(request, 'core/dashboard.html', context)
