@@ -352,6 +352,16 @@
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
                     <div class="modal-body">
+                        <div class="alert alert-warning">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            <strong>Important:</strong> For Amazon accounts with Two-Factor Authentication (2FA):
+                            <ul class="mb-0 mt-2">
+                                <li>First, sign into your Amazon account in a new window</li>
+                                <li>Go to your Amazon orders page to ensure you're fully logged in</li>
+                                <li>Then return here and try syncing again</li>
+                                <li>If sync lasts more than 30 seconds, your 2FA may be blocking the sync</li>
+                            </ul>
+                        </div>
                         <div id="loginSection">
                             <div class="mb-3">
                                 <label for="amazon_email" class="form-label">Amazon Email</label>
@@ -567,10 +577,12 @@ $(document).ready(function() {
         
         // Get order number and its HTML structure
         var orderNumberCell = row.find('td[data-field="order_number"]');
-        var orderNumber = orderNumberCell.text().trim();
+        var orderNumberLink = orderNumberCell.find('a');
+        var orderNumber = orderNumberLink.text().trim();
+        var orderUrl = orderNumberLink.attr('href');
         data['order_number'] = orderNumber;
         
-        // Store date HTML structure
+        // Store date exactly as entered
         var dateCell = row.find('span[data-field="date"]');
         var dateInput = dateCell.find('input');
         var dateValue = dateInput.val();
@@ -583,8 +595,10 @@ $(document).ready(function() {
                 return; // Skip date as we already handled it
             } else if ($(this).is('select')) {
                 data[field] = $(this).val();
+                $(this).prop('disabled', true);
             } else if ($(this).is('input')) {
                 data[field] = $(this).val();
+                $(this).prop('disabled', true);
             }
         });
 
@@ -596,12 +610,12 @@ $(document).ready(function() {
             success: function(response) {
                 if (response.success) {
                     // Format and restore the date
-                    var date = new Date(dateValue);
-                    var displayDate = `${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getDate().toString().padStart(2, '0')}/${date.getFullYear()}`;
+                    var [year, month, day] = dateValue.split('-');
+                    var displayDate = `${month}/${day}/${year}`;
                     dateCell.html(displayDate);
                     
                     // Restore order number with link
-                    orderNumberCell.html(`<a href="https://www.amazon.com/gp/your-account/order-details?orderID=${orderNumber}" target="_blank">${orderNumber}</a>`);
+                    orderNumberCell.html(`<a href="${orderUrl}">${orderNumber}</a>`);
                     
                     showToast('Order updated successfully', 'success');
                     exitEditMode(orderId);

@@ -88,4 +88,3 @@ def import_amazon_orders(user, email, password, otp=None):
 
 if __name__ == "__main__":
     result = import_amazon_orders("your_email@example.com", "your_password", otp="your_otp")
-    print(result)
